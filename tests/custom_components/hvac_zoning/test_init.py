@@ -7,7 +7,7 @@ import pytest
 
 from homeassistant import core
 from homeassistant.components.climate import SERVICE_SET_TEMPERATURE, HVACMode
-from homeassistant.components.hvac_zoning import (
+from custom_components.hvac_zoning import (
     adjust_house,
     async_setup_entry,
     determine_action,
@@ -19,7 +19,7 @@ from homeassistant.components.hvac_zoning import (
     get_all_cover_entity_ids,
     get_all_temperature_entity_ids,
 )
-from homeassistant.components.hvac_zoning.const import ACTIVE, DOMAIN, IDLE
+from custom_components.hvac_zoning.const import ACTIVE, DOMAIN, IDLE
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
     ATTR_ENTITY_ID,

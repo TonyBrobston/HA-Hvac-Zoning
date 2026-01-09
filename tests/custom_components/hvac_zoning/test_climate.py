@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 from homeassistant.components.climate.const import HVACMode
-from homeassistant.components.hvac_zoning.climate import Thermostat
+from custom_components.hvac_zoning.climate import Thermostat
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, EVENT_STATE_CHANGED
 from homeassistant.core import HomeAssistant
 

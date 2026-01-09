@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from homeassistant import data_entry_flow
-from homeassistant.components.hvac_zoning import config_flow
-from homeassistant.components.hvac_zoning.config_flow import (
+from custom_components.hvac_zoning import config_flow
+from custom_components.hvac_zoning.config_flow import (
     convert_bedroom_input_to_config_entry,
     convert_connectivities_input_to_config_entry,
     convert_user_input_to_boolean,
@@ -17,7 +17,7 @@ from homeassistant.components.hvac_zoning.config_flow import (
     get_options,
     merge_user_input,
 )
-from homeassistant.components.hvac_zoning.const import DOMAIN
+from custom_components.hvac_zoning.const import DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.area_registry import AreaEntry
 from homeassistant.helpers.entity_registry import RegistryEntry

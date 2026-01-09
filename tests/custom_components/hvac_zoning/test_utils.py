@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.hvac_zoning.utils import (
+from custom_components.hvac_zoning.utils import (
     filter_to_valid_areas,
     get_all_thermostat_entity_ids,
 )
