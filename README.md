@@ -44,4 +44,3 @@ To use this integration, you need the following devices integrated into Home Ass
 
 ---
 *Note: Ensure your entities are explicitly assigned to Areas in Home Assistant (Settings -> Areas & Zones) so the configuration flow can auto-discover them.*
-# HA-Hvac-Zoning
