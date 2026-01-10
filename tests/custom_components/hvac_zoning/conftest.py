@@ -10,6 +10,6 @@ import pytest
 def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.hvac_zoning.async_setup_entry", return_value=True
+        "custom_components.hvac_zoning.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

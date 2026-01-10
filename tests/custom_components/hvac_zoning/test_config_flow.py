@@ -42,7 +42,7 @@ from homeassistant.helpers.entity_registry import RegistryEntry
 #         print("foo")
 
 #     with patch(
-#         "homeassistant.components.hvac_zoning.config_flow.EntityRegistry",
+#         "custom_components.hvac_zoning.config_flow.EntityRegistry",
 #         return_value=entity_registry,
 #     ):
 #         entities = await get_entities_for_area(mock_self, area_id)
@@ -259,7 +259,6 @@ async def test_get_defaults(
     area_entry = AreaEntry(
         id=area_name,
         name=area_name,
-        normalized_name=area_name,
         aliases=[],
         floor_id=1,
         icon=None,
@@ -267,7 +266,7 @@ async def test_get_defaults(
     )
 
     with patch(
-        "homeassistant.components.hvac_zoning.config_flow.get_entities_for_area",
+        "custom_components.hvac_zoning.config_flow.get_entities_for_area",
         return_value=entities,
     ):
         defaults = await get_defaults(mock_self, area_entry, device_class, multiple)
@@ -308,7 +307,6 @@ async def test_get_options(hass: HomeAssistant) -> None:
     area_entry = AreaEntry(
         id="basement",
         name="basement",
-        normalized_name="basement",
         aliases=[],
         floor_id=1,
         icon=None,
@@ -316,7 +314,7 @@ async def test_get_options(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.hvac_zoning.config_flow.get_entities_for_area",
+        "custom_components.hvac_zoning.config_flow.get_entities_for_area",
         return_value=entities,
     ):
         options = await get_options(mock_self, area_entry, "damper")

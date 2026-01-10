@@ -1,0 +1,22 @@
+[project]
+name = "ha-hvac-zoning-master"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pytest>=8.3.3"]
+
+[dependency-groups]
+dev = [
+    "freezegun>=1.5.1",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-homeassistant-custom-component>=0.13.205",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".git", ".venv"]
+asyncio_mode = "auto"
+pythonpath = ["."]
+addopts = "-v --cov=custom_components.hvac_zoning --cov-report=term-missing"

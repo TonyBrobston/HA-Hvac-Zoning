@@ -1,7 +1,9 @@
 {
   "domain": "hvac_zoning",
   "name": "HVAC Zoning",
-  "codeowners": ["@tonybrobston"],
+  "codeowners": [
+    "@tonybrobston"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://www.home-assistant.io/integrations/hvac_zoning",
@@ -9,6 +11,7 @@
   "iot_class": "local_polling",
   "requirements": [],
   "single_config_entry": true,
+  "version": "0.1.0",
   "ssdp": [],
   "zeroconf": []
 }
