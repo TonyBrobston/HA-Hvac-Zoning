@@ -69,8 +69,7 @@ def determine_action(target_temperature: int, actual_temperature: int, hvac_mode
 
 def determine_is_night_time(bed_time, wake_time):
     """Determine is night time."""
-    timezone = dt_util.get_default_time_zone()
-    now = datetime.datetime.now().astimezone(timezone)
+    now = dt_util.now()
     bed_time = datetime.time.fromisoformat(bed_time)
     wake_time = datetime.time.fromisoformat(wake_time)
 
