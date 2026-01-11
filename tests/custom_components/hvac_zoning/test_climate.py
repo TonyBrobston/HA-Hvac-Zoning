@@ -18,7 +18,7 @@ def test_thermostat_default_target_temperature(hass: HomeAssistant) -> None:
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
-    assert thermostat._attr_target_temperature == 74.0
+    assert thermostat._attr_target_temperature == 72.0
     assert thermostat._attr_current_temperature is None
     assert thermostat._attr_hvac_mode is None
 

@@ -32,7 +32,7 @@ class Thermostat(ClimateEntity):
         """Thermostat init."""
         self._attr_unique_id = name
         self._attr_name = name
-        self._attr_target_temperature = 74.0
+        self._attr_target_temperature = 72.0
 
         def handle_event(event):
             event_dict = event.as_dict()
