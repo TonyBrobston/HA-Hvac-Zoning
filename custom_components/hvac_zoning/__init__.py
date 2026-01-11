@@ -290,25 +290,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             if area_thermostat_entity_id:
                 virtual_thermostat_entity_ids.append(area_thermostat_entity_id)
         thermostat_entity_ids = thermostat_entity_ids + virtual_thermostat_entity_ids
+        old_state = data.get("old_state")
+        new_state = data.get("new_state")
         is_thermostat_change = entity_id in thermostat_entity_ids
         is_connectivity_change = (
             entity_id in connectivity_entity_ids
-            and data["old_state"].state == STATE_OFF
-            and data["new_state"].state == STATE_ON
+            and old_state is not None
+            and new_state is not None
+            and old_state.state == STATE_OFF
+            and new_state.state == STATE_ON
         )
         if is_thermostat_change or is_connectivity_change:
             trigger_type = (
                 "thermostat" if is_thermostat_change else "connectivity sensor"
             )
-            old_state = data["old_state"].state if "old_state" in data else "unknown"
-            new_state = data["new_state"].state if "new_state" in data else "unknown"
+            old_state_str = old_state.state if old_state is not None else "unknown"
+            new_state_str = new_state.state if new_state is not None else "unknown"
             LOGGER.debug(
                 "[HVAC Zoning] handle_event_state_changed: Triggered by %s change - "
                 "entity_id=%s, old_state=%s, new_state=%s",
                 trigger_type,
                 entity_id,
-                old_state,
-                new_state,
+                old_state_str,
+                new_state_str,
             )
             adjust_house(hass, config_entry)
 
