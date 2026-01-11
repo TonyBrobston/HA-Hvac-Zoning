@@ -144,7 +144,7 @@ def determine_actual_temperature(hass: HomeAssistant, devices):
 
 def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
     """Adjust house."""
-    LOGGER.debug("adjust_house: Starting house adjustment")
+    LOGGER.debug("[HVAC Zoning] adjust_house: Starting house adjustment")
     config_entry_data = config_entry.as_dict()["data"]
     central_thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     central_thermostat = hass.states.get(central_thermostat_entity_ids[0])
@@ -154,7 +154,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
         ]
         central_hvac_mode = central_thermostat.state
         LOGGER.debug(
-            "adjust_house: Central thermostat state - "
+            "[HVAC Zoning] adjust_house: Central thermostat state - "
             "hvac_mode=%s, current_temp=%s",
             central_hvac_mode,
             central_thermostat_actual_temperature,
@@ -172,7 +172,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             "control_central_thermostat", False
         )
         LOGGER.debug(
-            "adjust_house: Night mode settings - "
+            "[HVAC Zoning] adjust_house: Night mode settings - "
             "is_night_time_mode=%s, is_night_time=%s, control_central_thermostat=%s",
             is_night_time_mode,
             is_night_time,
@@ -221,7 +221,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                     "opening" if service_to_call == SERVICE_OPEN_COVER else "closing"
                 )
                 LOGGER.debug(
-                    "adjust_house: Area '%s' - target_temp=%s, actual_temp=%s, "
+                    "[HVAC Zoning] adjust_house: Area '%s' - target_temp=%s, actual_temp=%s, "
                     "is_bedroom=%s, thermostat_action=%s, %s covers %s",
                     area_name,
                     area_target_temperature,
@@ -244,7 +244,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                 thermostat_action,
             )
             LOGGER.debug(
-                "adjust_house: Adjusting central thermostat - "
+                "[HVAC Zoning] adjust_house: Adjusting central thermostat - "
                 "entity_id=%s, thermostat_action=%s, new_target_temp=%s",
                 central_thermostat_entity_ids[0],
                 thermostat_action,
@@ -303,7 +303,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             old_state = data["old_state"].state if "old_state" in data else "unknown"
             new_state = data["new_state"].state if "new_state" in data else "unknown"
             LOGGER.debug(
-                "handle_event_state_changed: Triggered by %s change - "
+                "[HVAC Zoning] handle_event_state_changed: Triggered by %s change - "
                 "entity_id=%s, old_state=%s, new_state=%s",
                 trigger_type,
                 entity_id,
