@@ -126,20 +126,23 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Async setup entry."""
+    from .const import DOMAIN
 
     config_entry_data = config_entry.as_dict()["data"]
     config_entry_data_with_only_valid_areas = filter_to_valid_areas(config_entry_data)
     areas = config_entry_data_with_only_valid_areas.get("areas", {})
     thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     thermostat_entity_id = thermostat_entity_ids[0]
-    async_add_entities(
-        [
-            Thermostat(
-                hass,
-                key + "_thermostat",
-                value["temperature"],
-                thermostat_entity_id,
-            )
-            for key, value in areas.items()
-        ]
-    )
+
+    thermostats = {}
+    for key, value in areas.items():
+        thermostat = Thermostat(
+            hass,
+            key + "_thermostat",
+            value["temperature"],
+            thermostat_entity_id,
+        )
+        thermostats[value["temperature"]] = thermostat
+
+    hass.data[DOMAIN]["thermostats"] = thermostats
+    async_add_entities(list(thermostats.values()))
