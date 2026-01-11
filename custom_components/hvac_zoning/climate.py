@@ -8,8 +8,6 @@ from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_TEMPERATURE,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_STATE_CHANGED,
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
@@ -41,8 +39,6 @@ class Thermostat(ClimateEntity, RestoreEntity):
         self._attr_target_temperature = 72.0
         self._temperature_sensor_entity_id = temperature_sensor_entity_id
         self._thermostat_entity_id = thermostat_entity_id
-        self._added_to_hass = False
-        self._pending_state_update = False
 
     async def _async_restore_target_temperature(self) -> None:
         """Restore target temperature from previous state."""
@@ -55,60 +51,11 @@ class Thermostat(ClimateEntity, RestoreEntity):
                 except (ValueError, TypeError):
                     pass
 
-    def request_state_update(self) -> None:
-        """Request a state update, deferring if entity not yet added to hass."""
-        if self._added_to_hass:
-            self.async_write_ha_state()
-        else:
-            self._pending_state_update = True
-
     async def async_added_to_hass(self) -> None:
         """Run when entity is added to hass."""
         await super().async_added_to_hass()
 
         await self._async_restore_target_temperature()
-
-        self._added_to_hass = True
-
-        if self._pending_state_update:
-            self.async_write_ha_state()
-            self._pending_state_update = False
-
-        def is_valid_temperature(state) -> bool:
-            if state is None:
-                return False
-            try:
-                float(state.state)
-                return True
-            except (ValueError, TypeError):
-                return False
-
-        def handle_state_change(event):
-            event_dict = event.as_dict()
-            data = event_dict["data"]
-            entity_id = data["entity_id"]
-            if entity_id == self._temperature_sensor_entity_id:
-                new_state = data.get("new_state")
-                if is_valid_temperature(new_state):
-                    self.async_write_ha_state()
-            elif entity_id == self._thermostat_entity_id:
-                self.async_write_ha_state()
-
-        def handle_ha_started(event):
-            self.async_write_ha_state()
-
-        self.async_on_remove(
-            self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_state_change)
-        )
-
-        if self._hass.is_running:
-            self.async_write_ha_state()
-        else:
-            self.async_on_remove(
-                self._hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STARTED, handle_ha_started
-                )
-            )
 
     @property
     def current_temperature(self) -> float | None:
@@ -141,23 +88,20 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Async setup entry."""
-    from .const import DOMAIN
 
     config_entry_data = config_entry.as_dict()["data"]
     config_entry_data_with_only_valid_areas = filter_to_valid_areas(config_entry_data)
     areas = config_entry_data_with_only_valid_areas.get("areas", {})
     thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     thermostat_entity_id = thermostat_entity_ids[0]
-
-    thermostats = {}
-    for key, value in areas.items():
-        thermostat = Thermostat(
-            hass,
-            key + "_thermostat",
-            value["temperature"],
-            thermostat_entity_id,
-        )
-        thermostats[value["temperature"]] = thermostat
-
-    hass.data[DOMAIN]["thermostats"] = thermostats
-    async_add_entities(list(thermostats.values()))
+    async_add_entities(
+        [
+            Thermostat(
+                hass,
+                key + "_thermostat",
+                value["temperature"],
+                thermostat_entity_id,
+            )
+            for key, value in areas.items()
+        ]
+    )

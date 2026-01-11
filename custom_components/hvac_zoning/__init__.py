@@ -271,15 +271,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
-    def is_valid_temperature(state) -> bool:
-        if state is None:
-            return False
-        try:
-            float(state.state)
-            return True
-        except (ValueError, TypeError):
-            return False
-
     def handle_event_state_changed(event):
         event_dict = event.as_dict()
         data = event_dict["data"]
@@ -291,7 +282,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         areas = config_entry_data_with_only_valid_areas.get("areas", {})
         # cover_entity_ids = get_all_cover_entity_ids(areas)
         connectivity_entity_ids = get_all_connectivity_entity_ids(areas)
-        temperature_entity_ids = get_all_temperature_entity_ids(areas)
+        # temperature_entity_ids = get_all_temperature_entity_ids(areas)
         thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
         entity_registry = async_get_entity_registry(hass)
         virtual_thermostat_entity_ids = []
@@ -313,21 +304,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             and old_state.state == STATE_OFF
             and new_state.state == STATE_ON
         )
-        is_temperature_sensor_online = (
-            entity_id in temperature_entity_ids
-            and is_valid_temperature(new_state)
-        )
-        if is_temperature_sensor_online:
-            thermostats = hass.data[DOMAIN].get("thermostats", {})
-            thermostat = thermostats.get(entity_id)
-            if thermostat:
-                LOGGER.debug(
-                    "[HVAC Zoning] handle_event_state_changed: Temperature sensor online - "
-                    "entity_id=%s, new_state=%s, updating thermostat",
-                    entity_id,
-                    new_state.state if new_state else "unknown",
-                )
-                thermostat.request_state_update()
         if is_thermostat_change or is_connectivity_change:
             trigger_type = (
                 "thermostat" if is_thermostat_change else "connectivity sensor"
