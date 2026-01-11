@@ -17,6 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 import homeassistant.util.dt as dt_util
 
 from .const import ACTIVE, DOMAIN, IDLE, LOGGER, SUPPORTED_HVAC_MODES
@@ -122,7 +123,12 @@ def determine_change_in_temperature(
 
 def determine_target_temperature(hass: HomeAssistant, area):
     """Determine thermostat temperature."""
-    thermostat = hass.states.get("climate." + area + "_thermostat")
+    entity_registry = async_get_entity_registry(hass)
+    area_thermostat_unique_id = area + "_thermostat"
+    area_thermostat_entity_id = entity_registry.async_get_entity_id(
+        "climate", DOMAIN, area_thermostat_unique_id
+    )
+    thermostat = hass.states.get(area_thermostat_entity_id)
     return (
         thermostat.attributes["temperature"]
         if thermostat and "temperature" in thermostat.attributes
@@ -170,9 +176,14 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             for area, devices in thermostat_areas.items()
         ]
         thermostat_action = ACTIVE if ACTIVE in actions else IDLE
-        for key, values in areas.items():
-            area_thermostat = hass.states.get("climate." + key + "_thermostat")
-            area_temperature_sensor = hass.states.get(values["temperature"])
+        entity_registry = async_get_entity_registry(hass)
+        for area_name, area_config in areas.items():
+            area_thermostat_unique_id = area_name + "_thermostat"
+            area_thermostat_entity_id = entity_registry.async_get_entity_id(
+                "climate", DOMAIN, area_thermostat_unique_id
+            )
+            area_thermostat = hass.states.get(area_thermostat_entity_id)
+            area_temperature_sensor = hass.states.get(area_config["temperature"])
             if (
                 area_thermostat
                 and "temperature" in area_thermostat.attributes
@@ -180,7 +191,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             ):
                 area_actual_temperature = int(float(area_temperature_sensor.state))
                 area_target_temperature = area_thermostat.attributes["temperature"]
-                is_bedroom = values["bedroom"]
+                is_bedroom = area_config["bedroom"]
                 service_to_call = determine_cover_service_to_call(
                     area_target_temperature,
                     area_actual_temperature,
@@ -191,7 +202,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                     is_bedroom,
                     control_central_thermostat,
                 )
-                covers = values["covers"]
+                covers = area_config["covers"]
                 LOGGER.info(
                     f"\nservice_to_call: {service_to_call}"
                     f"\ncovers: {covers}"
@@ -238,9 +249,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         connectivity_entity_ids = get_all_connectivity_entity_ids(areas)
         # temperature_entity_ids = get_all_temperature_entity_ids(areas)
         thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
-        virtual_thermostat_entity_ids = [
-            "climate." + area + "_thermostat" for area in areas
-        ]
+        entity_registry = async_get_entity_registry(hass)
+        virtual_thermostat_entity_ids = []
+        for area_name in areas:
+            area_thermostat_unique_id = area_name + "_thermostat"
+            area_thermostat_entity_id = entity_registry.async_get_entity_id(
+                "climate", DOMAIN, area_thermostat_unique_id
+            )
+            if area_thermostat_entity_id:
+                virtual_thermostat_entity_ids.append(area_thermostat_entity_id)
         thermostat_entity_ids = thermostat_entity_ids + virtual_thermostat_entity_ids
         if entity_id in thermostat_entity_ids or (
             entity_id in connectivity_entity_ids
