@@ -327,7 +327,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                     entity_id,
                     new_state.state if new_state else "unknown",
                 )
-                thermostat.async_write_ha_state()
+                thermostat.request_state_update()
         if is_thermostat_change or is_connectivity_change:
             trigger_type = (
                 "thermostat" if is_thermostat_change else "connectivity sensor"

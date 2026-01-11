@@ -41,6 +41,8 @@ class Thermostat(ClimateEntity, RestoreEntity):
         self._attr_target_temperature = 72.0
         self._temperature_sensor_entity_id = temperature_sensor_entity_id
         self._thermostat_entity_id = thermostat_entity_id
+        self._added_to_hass = False
+        self._pending_state_update = False
 
     async def _async_restore_target_temperature(self) -> None:
         """Restore target temperature from previous state."""
@@ -53,11 +55,24 @@ class Thermostat(ClimateEntity, RestoreEntity):
                 except (ValueError, TypeError):
                     pass
 
+    def request_state_update(self) -> None:
+        """Request a state update, deferring if entity not yet added to hass."""
+        if self._added_to_hass:
+            self.async_write_ha_state()
+        else:
+            self._pending_state_update = True
+
     async def async_added_to_hass(self) -> None:
         """Run when entity is added to hass."""
         await super().async_added_to_hass()
 
         await self._async_restore_target_temperature()
+
+        self._added_to_hass = True
+
+        if self._pending_state_update:
+            self.async_write_ha_state()
+            self._pending_state_update = False
 
         def is_valid_temperature(state) -> bool:
             if state is None:
