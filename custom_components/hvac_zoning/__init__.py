@@ -17,6 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 import homeassistant.util.dt as dt_util
 
 from .const import ACTIVE, DOMAIN, IDLE, LOGGER, SUPPORTED_HVAC_MODES
@@ -122,7 +123,13 @@ def determine_change_in_temperature(
 
 def determine_target_temperature(hass: HomeAssistant, area):
     """Determine thermostat temperature."""
-    thermostat = hass.states.get("climate." + area + "_thermostat")
+    # Use entity registry to get actual entity ID (HA may add suffixes like _2)
+    entity_registry = er.async_get(hass)
+    unique_id = area + "_thermostat"
+    entity_id = entity_registry.async_get_entity_id("climate", DOMAIN, unique_id)
+    if not entity_id:
+        entity_id = "climate." + unique_id
+    thermostat = hass.states.get(entity_id)
     return (
         thermostat.attributes["temperature"]
         if thermostat and "temperature" in thermostat.attributes
@@ -170,8 +177,15 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             for area, devices in thermostat_areas.items()
         ]
         thermostat_action = ACTIVE if ACTIVE in actions else IDLE
+        # Get entity registry to look up actual entity IDs for virtual thermostats
+        entity_registry = er.async_get(hass)
         for key, values in areas.items():
-            area_thermostat = hass.states.get("climate." + key + "_thermostat")
+            # Look up actual entity ID from registry (HA may add suffixes like _2)
+            unique_id = key + "_thermostat"
+            area_thermostat_entity_id = entity_registry.async_get_entity_id("climate", DOMAIN, unique_id)
+            if not area_thermostat_entity_id:
+                area_thermostat_entity_id = "climate." + unique_id
+            area_thermostat = hass.states.get(area_thermostat_entity_id)
             area_temperature_sensor = hass.states.get(values["temperature"])
             if (
                 area_thermostat
@@ -238,9 +252,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         connectivity_entity_ids = get_all_connectivity_entity_ids(areas)
         # temperature_entity_ids = get_all_temperature_entity_ids(areas)
         thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
-        virtual_thermostat_entity_ids = [
-            "climate." + area + "_thermostat" for area in areas
-        ]
+        # Use entity registry to get actual entity IDs for virtual thermostats
+        # (HA may add suffixes like _2 if there are naming conflicts)
+        entity_registry = er.async_get(hass)
+        virtual_thermostat_entity_ids = []
+        for area in areas:
+            unique_id = area + "_thermostat"
+            entry = entity_registry.async_get_entity_id("climate", DOMAIN, unique_id)
+            if entry:
+                virtual_thermostat_entity_ids.append(entry)
+            else:
+                # Fallback to constructed name if not found in registry
+                virtual_thermostat_entity_ids.append("climate." + unique_id)
         thermostat_entity_ids = thermostat_entity_ids + virtual_thermostat_entity_ids
         if entity_id in thermostat_entity_ids or (
             entity_id in connectivity_entity_ids

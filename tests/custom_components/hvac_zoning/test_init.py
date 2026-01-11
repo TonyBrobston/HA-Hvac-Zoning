@@ -33,6 +33,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -418,27 +419,40 @@ async def test_async_setup_entry(hass: HomeAssistant) -> None:
         new_state="open",
     )
     hass.states.async_set(
-        entity_id=area_target_temperature_entity_id,
+        entity_id=area_actual_temperature_entity_id,
+        new_state=69,
+    )
+    await hass.async_block_till_done()
+    # Mock services before async_setup_entry to handle any service calls during setup
+    hass.services = MagicMock()
+
+    await async_setup_entry(hass, config_entry)
+
+    # Get the actual entity ID from the registry (HA may add suffixes like _2)
+    entity_registry = er.async_get(hass)
+    actual_thermostat_entity_id = entity_registry.async_get_entity_id(
+        "climate", DOMAIN, "master_bedroom_thermostat"
+    )
+    assert actual_thermostat_entity_id is not None
+
+    # Set the state on the actual entity ID
+    hass.states.async_set(
+        entity_id=actual_thermostat_entity_id,
         new_state=None,
         attributes={
             "temperature": 70,
         },
     )
-    hass.states.async_set(
-        entity_id=area_actual_temperature_entity_id,
-        new_state=69,
-    )
     await hass.async_block_till_done()
-    hass.services = MagicMock()
-
-    await async_setup_entry(hass, config_entry)
+    # Reset the mock to only count calls from the event we fire
+    hass.services.reset_mock()
 
     hass.bus.async_fire(
         EVENT_STATE_CHANGED,
         {
-            ATTR_ENTITY_ID: area_target_temperature_entity_id,
+            ATTR_ENTITY_ID: actual_thermostat_entity_id,
             "old_state": core.State(
-                area_target_temperature_entity_id,
+                actual_thermostat_entity_id,
                 71,
             ),
         },
@@ -483,20 +497,33 @@ async def test_async_setup_entry_damper_wake(hass: HomeAssistant) -> None:
         },
     )
     hass.states.async_set(
-        entity_id=area_target_temperature_entity_id,
+        entity_id=area_actual_temperature_entity_id,
+        new_state=69,
+    )
+    await hass.async_block_till_done()
+    # Mock services before async_setup_entry to handle any service calls during setup
+    hass.services = MagicMock()
+
+    await async_setup_entry(hass, config_entry)
+
+    # Get the actual entity ID from the registry (HA may add suffixes like _2)
+    entity_registry = er.async_get(hass)
+    actual_thermostat_entity_id = entity_registry.async_get_entity_id(
+        "climate", DOMAIN, "master_bedroom_thermostat"
+    )
+    assert actual_thermostat_entity_id is not None
+
+    # Set the state on the actual entity ID
+    hass.states.async_set(
+        entity_id=actual_thermostat_entity_id,
         new_state=None,
         attributes={
             "temperature": 70,
         },
     )
-    hass.states.async_set(
-        entity_id=area_actual_temperature_entity_id,
-        new_state=69,
-    )
     await hass.async_block_till_done()
-    hass.services = MagicMock()
-
-    await async_setup_entry(hass, config_entry)
+    # Reset the mock to only count calls from the event we fire
+    hass.services.reset_mock()
 
     hass.bus.async_fire(
         EVENT_STATE_CHANGED,
