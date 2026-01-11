@@ -41,13 +41,13 @@ class Thermostat(ClimateEntity):
         self._attr_name = name
         self._attr_target_temperature = 72.0
         central_thermostat = hass.states.get(thermostat_entity_id)
-        LOGGER.debug(
+        LOGGER.info(
             "Thermostat.__init__: name=%s, central_thermostat=%s",
             name,
             central_thermostat,
         )
         if central_thermostat:
-            LOGGER.debug(
+            LOGGER.info(
                 "Thermostat.__init__: name=%s, central_thermostat.state=%s",
                 name,
                 central_thermostat.state,
@@ -68,7 +68,7 @@ class Thermostat(ClimateEntity):
             entity_id = data["entity_id"]
             if entity_id == temperature_sensor_entity_id:
                 current_temperature = float(data["new_state"].state)
-                LOGGER.debug(
+                LOGGER.info(
                     "Thermostat.handle_event: name=%s, temperature update from %s, "
                     "new current_temperature=%s",
                     name,
@@ -80,7 +80,7 @@ class Thermostat(ClimateEntity):
                     self.schedule_update_ha_state()
             if entity_id == thermostat_entity_id:
                 hvac_mode = data["new_state"].state
-                LOGGER.debug(
+                LOGGER.info(
                     "Thermostat.handle_event: name=%s, hvac_mode update from %s, "
                     "new hvac_mode=%s",
                     name,
@@ -91,7 +91,7 @@ class Thermostat(ClimateEntity):
                 if self.hass is not None:
                     self.schedule_update_ha_state()
 
-        LOGGER.debug("hvac_zoning: Thermostat.__init__: name=%s, registering EVENT_STATE_CHANGED listener", name)
+        LOGGER.info("hvac_zoning: Thermostat.__init__: name=%s, registering EVENT_STATE_CHANGED listener", name)
         hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
         LOGGER.info("hvac_zoning: Thermostat.__init__: name=%s, initialization complete", name)
 
@@ -106,7 +106,7 @@ class Thermostat(ClimateEntity):
         )
         self._attr_target_temperature = temperature
         if self.hass is not None:
-            LOGGER.debug("hvac_zoning: Thermostat.set_temperature: name=%s, scheduling HA state update", self._attr_name)
+            LOGGER.info("hvac_zoning: Thermostat.set_temperature: name=%s, scheduling HA state update", self._attr_name)
             self.schedule_update_ha_state()
 
 
@@ -119,12 +119,12 @@ async def async_setup_entry(
     LOGGER.info("hvac_zoning: climate.async_setup_entry: Starting climate platform setup")
 
     config_entry_data = config_entry.as_dict()["data"]
-    LOGGER.debug("hvac_zoning: climate.async_setup_entry: config_entry_data=%s", config_entry_data)
+    LOGGER.info("hvac_zoning: climate.async_setup_entry: config_entry_data=%s", config_entry_data)
     config_entry_data_with_only_valid_areas = filter_to_valid_areas(config_entry_data)
     areas = config_entry_data_with_only_valid_areas.get("areas", {})
-    LOGGER.debug("hvac_zoning: climate.async_setup_entry: valid areas=%s", list(areas.keys()))
+    LOGGER.info("hvac_zoning: climate.async_setup_entry: valid areas=%s", list(areas.keys()))
     thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
-    LOGGER.debug("hvac_zoning: climate.async_setup_entry: thermostat_entity_ids=%s", thermostat_entity_ids)
+    LOGGER.info("hvac_zoning: climate.async_setup_entry: thermostat_entity_ids=%s", thermostat_entity_ids)
     if not thermostat_entity_ids:
         LOGGER.warning("hvac_zoning: climate.async_setup_entry: No thermostat entity IDs found, cannot create virtual thermostats")
         return
