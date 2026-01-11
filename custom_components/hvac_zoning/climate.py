@@ -10,7 +10,7 @@ from homeassistant.const import ATTR_TEMPERATURE, EVENT_STATE_CHANGED, UnitOfTem
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import SUPPORTED_HVAC_MODES
+from .const import LOGGER, SUPPORTED_HVAC_MODES
 from .utils import filter_to_valid_areas, get_all_thermostat_entity_ids
 
 
@@ -35,10 +35,25 @@ class Thermostat(ClimateEntity):
         self._attr_target_temperature = 72.0
 
         thermostat_state = hass.states.get(thermostat_entity_id)
+        LOGGER.debug(
+            "Initializing thermostat %s: central_thermostat_entity_id=%s, "
+            "thermostat_state=%s, thermostat_state.state=%s",
+            name,
+            thermostat_entity_id,
+            thermostat_state,
+            thermostat_state.state if thermostat_state else None,
+        )
         if thermostat_state is not None and thermostat_state.state in SUPPORTED_HVAC_MODES:
             self._attr_hvac_mode = thermostat_state.state
+            LOGGER.debug(
+                "Set hvac_mode to central thermostat state: %s", self._attr_hvac_mode
+            )
         else:
             self._attr_hvac_mode = SUPPORTED_HVAC_MODES[0]
+            LOGGER.debug(
+                "Central thermostat state not valid, defaulting hvac_mode to: %s",
+                self._attr_hvac_mode,
+            )
 
         def handle_event(event):
             event_dict = event.as_dict()
@@ -71,6 +86,12 @@ async def async_setup_entry(
     areas = config_entry_data_with_only_valid_areas.get("areas", {})
     thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     thermostat_entity_id = thermostat_entity_ids[0]
+    LOGGER.debug(
+        "async_setup_entry: thermostat_entity_ids=%s, using thermostat_entity_id=%s, areas=%s",
+        thermostat_entity_ids,
+        thermostat_entity_id,
+        list(areas.keys()),
+    )
     async_add_entities(
         [
             Thermostat(
