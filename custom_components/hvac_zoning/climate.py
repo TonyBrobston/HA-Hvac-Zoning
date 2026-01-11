@@ -8,8 +8,6 @@ from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_TEMPERATURE,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_STATE_CHANGED,
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
@@ -58,32 +56,6 @@ class Thermostat(ClimateEntity, RestoreEntity):
         await super().async_added_to_hass()
 
         await self._async_restore_target_temperature()
-
-        def handle_state_change(event):
-            event_dict = event.as_dict()
-            data = event_dict["data"]
-            entity_id = data["entity_id"]
-            if (
-                entity_id == self._temperature_sensor_entity_id
-                or entity_id == self._thermostat_entity_id
-            ):
-                self.async_write_ha_state()
-
-        def handle_ha_started(event):
-            self.async_write_ha_state()
-
-        self.async_on_remove(
-            self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_state_change)
-        )
-
-        if self._hass.is_running:
-            self.async_write_ha_state()
-        else:
-            self.async_on_remove(
-                self._hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STARTED, handle_ha_started
-                )
-            )
 
     @property
     def current_temperature(self) -> float | None:
