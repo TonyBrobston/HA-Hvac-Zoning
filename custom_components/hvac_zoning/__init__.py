@@ -259,10 +259,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             if area_thermostat_entity_id:
                 virtual_thermostat_entity_ids.append(area_thermostat_entity_id)
         thermostat_entity_ids = thermostat_entity_ids + virtual_thermostat_entity_ids
+        old_state = data.get("old_state")
+        new_state = data.get("new_state")
         if entity_id in thermostat_entity_ids or (
             entity_id in connectivity_entity_ids
-            and data["old_state"].state == STATE_OFF
-            and data["new_state"].state == STATE_ON
+            and old_state is not None
+            and new_state is not None
+            and old_state.state == STATE_OFF
+            and new_state.state == STATE_ON
         ):
             LOGGER.info(
                 f"\nentity_id: {data['entity_id']}"

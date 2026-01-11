@@ -613,3 +613,63 @@ async def test_async_setup_entry_damper_open(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     assert hass.services.call.call_count == 0
+
+
+async def test_async_setup_entry_connectivity_old_state_none(
+    hass: HomeAssistant,
+) -> None:
+    """Test that event handler handles None old_state without error."""
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            **data,
+            "control_central_thermostat": False,
+        },
+        state=ConfigEntryState.LOADED,
+    )
+    hass.states.async_set(
+        entity_id=central_thermostat_entity_id,
+        new_state="heat",
+        attributes={
+            "current_temperature": 68,
+        },
+    )
+    hass.states.async_set(
+        entity_id=area_actual_temperature_entity_id,
+        new_state=69,
+    )
+    await hass.async_block_till_done()
+    hass.services = MagicMock()
+
+    await async_setup_entry(hass, config_entry)
+
+    entity_registry = er.async_get(hass)
+    actual_thermostat_entity_id = entity_registry.async_get_entity_id(
+        "climate", DOMAIN, "master_bedroom_thermostat"
+    )
+    assert actual_thermostat_entity_id is not None
+
+    hass.states.async_set(
+        entity_id=actual_thermostat_entity_id,
+        new_state=None,
+        attributes={
+            "temperature": 70,
+        },
+    )
+    await hass.async_block_till_done()
+    hass.services.reset_mock()
+
+    hass.bus.async_fire(
+        EVENT_STATE_CHANGED,
+        {
+            ATTR_ENTITY_ID: cover_connectivity_entity_id,
+            "old_state": None,
+            "new_state": core.State(
+                cover_connectivity_entity_id,
+                STATE_ON,
+            ),
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert hass.services.call.call_count == 0
