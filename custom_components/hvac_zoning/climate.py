@@ -36,15 +36,23 @@ class Thermostat(ClimateEntity):
         self._temperature_sensor_entity_id = temperature_sensor_entity_id
         self._thermostat_entity_id = thermostat_entity_id
 
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to hass."""
+        await super().async_added_to_hass()
+
         def handle_event(event):
             event_dict = event.as_dict()
             data = event_dict["data"]
             entity_id = data["entity_id"]
-            if entity_id == temperature_sensor_entity_id or entity_id == thermostat_entity_id:
-                if self.hass is not None:
-                    self.async_write_ha_state()
+            if (
+                entity_id == self._temperature_sensor_entity_id
+                or entity_id == self._thermostat_entity_id
+            ):
+                self.async_write_ha_state()
 
-        hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
+        self.async_on_remove(
+            self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
+        )
 
     @property
     def current_temperature(self) -> float | None:
