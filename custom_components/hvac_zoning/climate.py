@@ -6,7 +6,12 @@ from typing import Any
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, EVENT_STATE_CHANGED, UnitOfTemperature
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_STATE_CHANGED,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -40,7 +45,7 @@ class Thermostat(ClimateEntity):
         """Run when entity is added to hass."""
         await super().async_added_to_hass()
 
-        def handle_event(event):
+        def handle_state_change(event):
             event_dict = event.as_dict()
             data = event_dict["data"]
             entity_id = data["entity_id"]
@@ -50,11 +55,21 @@ class Thermostat(ClimateEntity):
             ):
                 self.async_write_ha_state()
 
+        def handle_ha_started(event):
+            self.async_write_ha_state()
+
         self.async_on_remove(
-            self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
+            self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_state_change)
         )
 
-        self.async_write_ha_state()
+        if self._hass.is_running:
+            self.async_write_ha_state()
+        else:
+            self.async_on_remove(
+                self._hass.bus.async_listen_once(
+                    EVENT_HOMEASSISTANT_STARTED, handle_ha_started
+                )
+            )
 
     @property
     def current_temperature(self) -> float | None:
