@@ -33,24 +33,13 @@ class Thermostat(ClimateEntity):
         self._attr_unique_id = name
         self._attr_name = name
         self._attr_target_temperature = 72.0
-
-        # central_thermostat = hass.states.get(thermostat_entity_id)
-        # central_hvac_mode = central_thermostat.state
-        # LOGGER.info(
-        #     "central_thermostat: %s: central_hvac_mode=%s",
-        #     central_thermostat,
-        #     central_hvac_mode,
-        # )
-        # self._attr_hvac_mode = central_hvac_mode
+        central_thermostat = hass.states.get(thermostat_entity_id)
+        self._attr_hvac_mode = central_thermostat.state
 
         def handle_event(event):
             event_dict = event.as_dict()
             data = event_dict["data"]
             entity_id = data["entity_id"]
-            LOGGER.info(
-                "handle_event: entity_id: %s",
-                entity_id,
-            )
             if entity_id == temperature_sensor_entity_id:
                 current_temperature = float(data["new_state"].state)
                 self._attr_current_temperature = current_temperature
