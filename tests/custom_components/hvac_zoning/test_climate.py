@@ -1,11 +1,10 @@
 """Test Climate."""
 
-from unittest.mock import MagicMock
-
 from homeassistant.components.climate.const import HVACMode
-from custom_components.hvac_zoning.climate import Thermostat
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, EVENT_STATE_CHANGED
+from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
+
+from custom_components.hvac_zoning.climate import Thermostat
 
 name = "basement_thermostat"
 temperature_sensor_entity_id = "sensor.basement_temperature"
@@ -21,11 +20,11 @@ def test_thermostat_default_target_temperature(hass: HomeAssistant) -> None:
     )
 
     assert thermostat._attr_target_temperature == 72.0
-    assert thermostat._attr_hvac_mode == HVACMode.HEAT
+    assert thermostat.hvac_mode == HVACMode.HEAT
 
 
-def test_thermostat_initial_current_temperature(hass: HomeAssistant) -> None:
-    """Test thermostat sets initial current temperature from temperature sensor."""
+def test_thermostat_current_temperature_from_sensor(hass: HomeAssistant) -> None:
+    """Test thermostat gets current temperature from temperature sensor."""
     hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
     hass.states.async_set(temperature_sensor_entity_id, "68.5")
 
@@ -33,7 +32,7 @@ def test_thermostat_initial_current_temperature(hass: HomeAssistant) -> None:
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
-    assert thermostat._attr_current_temperature == 68.5
+    assert thermostat.current_temperature == 68.5
 
 
 def test_set_temperature(hass: HomeAssistant) -> None:
@@ -51,50 +50,43 @@ def test_set_temperature(hass: HomeAssistant) -> None:
     assert thermostat._attr_target_temperature == target_temperature
 
 
-def test_set_current_temperature(hass: HomeAssistant) -> None:
-    """Test set current temperature."""
+def test_current_temperature_updates_with_sensor_state(hass: HomeAssistant) -> None:
+    """Test current temperature updates when sensor state changes."""
+    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
+    hass.states.async_set(temperature_sensor_entity_id, "68.0")
+
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+
+    assert thermostat.current_temperature == 68.0
+
+    hass.states.async_set(temperature_sensor_entity_id, "69.0")
+
+    assert thermostat.current_temperature == 69.0
+
+
+def test_hvac_mode_updates_with_thermostat_state(hass: HomeAssistant) -> None:
+    """Test hvac mode updates when central thermostat state changes."""
     hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
 
     thermostat = Thermostat(
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
-    hass.bus.async_fire(
-        EVENT_STATE_CHANGED,
-        {
-            ATTR_ENTITY_ID: temperature_sensor_entity_id,
-            "new_state": MagicMock(state="69.0"),
-        },
-    )
+    assert thermostat.hvac_mode == HVACMode.HEAT
 
-    assert thermostat._attr_current_temperature == 69.0
+    hass.states.async_set(thermostat_entity_id, HVACMode.COOL)
+
+    assert thermostat.hvac_mode == HVACMode.COOL
 
 
-def test_set_hvac_mode(hass: HomeAssistant) -> None:
-    """Test set hvac mode."""
-    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
-
-    thermostat = Thermostat(
-        hass, name, temperature_sensor_entity_id, thermostat_entity_id
-    )
-
-    hass.bus.async_fire(
-        EVENT_STATE_CHANGED,
-        {
-            ATTR_ENTITY_ID: thermostat_entity_id,
-            "new_state": MagicMock(state=HVACMode.COOL),
-        },
-    )
-
-    assert thermostat._attr_hvac_mode == HVACMode.COOL
-
-
-def test_thermostat_with_unavailable_central_thermostat(hass: HomeAssistant) -> None:
-    """Test thermostat initialization when central thermostat is not yet available."""
+def test_thermostat_with_unavailable_entities(hass: HomeAssistant) -> None:
+    """Test thermostat when central thermostat and temperature sensor are not yet available."""
     thermostat = Thermostat(
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
     assert thermostat._attr_target_temperature == 72.0
-    assert thermostat._attr_current_temperature is None
-    assert thermostat._attr_hvac_mode is None
+    assert thermostat.current_temperature is None
+    assert thermostat.hvac_mode is None

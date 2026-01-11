@@ -6,7 +6,12 @@ from typing import Any
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, EVENT_STATE_CHANGED, UnitOfTemperature
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_STATE_CHANGED,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -19,7 +24,6 @@ class Thermostat(ClimateEntity):
 
     _attr_temperature_unit = UnitOfTemperature.FAHRENHEIT
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
-    _attr_hvac_mode = None
     _attr_hvac_modes = SUPPORTED_HVAC_MODES
 
     def __init__(
@@ -30,28 +34,61 @@ class Thermostat(ClimateEntity):
         thermostat_entity_id,
     ) -> None:
         """Thermostat init."""
+        self._hass = hass
         self._attr_unique_id = name
         self._attr_name = name
         self._attr_target_temperature = 72.0
-        central_thermostat = hass.states.get(thermostat_entity_id)
-        if central_thermostat is not None:
-            self._attr_hvac_mode = central_thermostat.state
-        temperature_sensor = hass.states.get(temperature_sensor_entity_id)
-        if temperature_sensor is not None:
-            self._attr_current_temperature = float(temperature_sensor.state)
+        self._temperature_sensor_entity_id = temperature_sensor_entity_id
+        self._thermostat_entity_id = thermostat_entity_id
 
-        def handle_event(event):
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to hass."""
+        await super().async_added_to_hass()
+
+        def handle_state_change(event):
             event_dict = event.as_dict()
             data = event_dict["data"]
             entity_id = data["entity_id"]
-            if entity_id == temperature_sensor_entity_id:
-                current_temperature = float(data["new_state"].state)
-                self._attr_current_temperature = current_temperature
-            if entity_id == thermostat_entity_id:
-                hvac_mode = data["new_state"].state
-                self._attr_hvac_mode = hvac_mode
+            if (
+                entity_id == self._temperature_sensor_entity_id
+                or entity_id == self._thermostat_entity_id
+            ):
+                self.async_write_ha_state()
 
-        hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
+        def handle_ha_started(event):
+            self.async_write_ha_state()
+
+        self.async_on_remove(
+            self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_state_change)
+        )
+
+        if self._hass.is_running:
+            self.async_write_ha_state()
+        else:
+            self.async_on_remove(
+                self._hass.bus.async_listen_once(
+                    EVENT_HOMEASSISTANT_STARTED, handle_ha_started
+                )
+            )
+
+    @property
+    def current_temperature(self) -> float | None:
+        """Return the current temperature from the temperature sensor."""
+        temperature_sensor = self._hass.states.get(self._temperature_sensor_entity_id)
+        if temperature_sensor is not None:
+            try:
+                return float(temperature_sensor.state)
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    @property
+    def hvac_mode(self) -> str | None:
+        """Return the current HVAC mode from the central thermostat."""
+        central_thermostat = self._hass.states.get(self._thermostat_entity_id)
+        if central_thermostat is not None:
+            return central_thermostat.state
+        return None
 
     def set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
