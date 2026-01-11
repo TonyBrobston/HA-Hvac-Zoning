@@ -316,15 +316,24 @@ async def test_adjust_house(hass: HomeAssistant) -> None:
         new_state="open",
     )
     hass.states.async_set(
-        entity_id=area_target_temperature_entity_id,
+        entity_id=area_actual_temperature_entity_id,
+        new_state=70,
+    )
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    entity_registry.async_get_or_create(
+        "climate",
+        DOMAIN,
+        "master_bedroom_thermostat",
+        suggested_object_id="master_bedroom_thermostat",
+    )
+    hass.states.async_set(
+        entity_id="climate.master_bedroom_thermostat",
         new_state=None,
         attributes={
             "temperature": 71,
         },
-    )
-    hass.states.async_set(
-        entity_id=area_actual_temperature_entity_id,
-        new_state=70,
     )
     await hass.async_block_till_done()
     hass.services = MagicMock()
@@ -373,15 +382,24 @@ async def test_adjust_house_control_central_thermostat_false(
         new_state="open",
     )
     hass.states.async_set(
-        entity_id=area_target_temperature_entity_id,
+        entity_id=area_actual_temperature_entity_id,
+        new_state=70,
+    )
+    await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    entity_registry.async_get_or_create(
+        "climate",
+        DOMAIN,
+        "master_bedroom_thermostat",
+        suggested_object_id="master_bedroom_thermostat",
+    )
+    hass.states.async_set(
+        entity_id="climate.master_bedroom_thermostat",
         new_state=None,
         attributes={
             "temperature": 71,
         },
-    )
-    hass.states.async_set(
-        entity_id=area_actual_temperature_entity_id,
-        new_state=70,
     )
     await hass.async_block_till_done()
     hass.services = MagicMock()
@@ -423,19 +441,16 @@ async def test_async_setup_entry(hass: HomeAssistant) -> None:
         new_state=69,
     )
     await hass.async_block_till_done()
-    # Mock services before async_setup_entry to handle any service calls during setup
     hass.services = MagicMock()
 
     await async_setup_entry(hass, config_entry)
 
-    # Get the actual entity ID from the registry (HA may add suffixes like _2)
     entity_registry = er.async_get(hass)
     actual_thermostat_entity_id = entity_registry.async_get_entity_id(
         "climate", DOMAIN, "master_bedroom_thermostat"
     )
     assert actual_thermostat_entity_id is not None
 
-    # Set the state on the actual entity ID
     hass.states.async_set(
         entity_id=actual_thermostat_entity_id,
         new_state=None,
@@ -444,7 +459,6 @@ async def test_async_setup_entry(hass: HomeAssistant) -> None:
         },
     )
     await hass.async_block_till_done()
-    # Reset the mock to only count calls from the event we fire
     hass.services.reset_mock()
 
     hass.bus.async_fire(
@@ -501,19 +515,16 @@ async def test_async_setup_entry_damper_wake(hass: HomeAssistant) -> None:
         new_state=69,
     )
     await hass.async_block_till_done()
-    # Mock services before async_setup_entry to handle any service calls during setup
     hass.services = MagicMock()
 
     await async_setup_entry(hass, config_entry)
 
-    # Get the actual entity ID from the registry (HA may add suffixes like _2)
     entity_registry = er.async_get(hass)
     actual_thermostat_entity_id = entity_registry.async_get_entity_id(
         "climate", DOMAIN, "master_bedroom_thermostat"
     )
     assert actual_thermostat_entity_id is not None
 
-    # Set the state on the actual entity ID
     hass.states.async_set(
         entity_id=actual_thermostat_entity_id,
         new_state=None,
@@ -522,7 +533,6 @@ async def test_async_setup_entry_damper_wake(hass: HomeAssistant) -> None:
         },
     )
     await hass.async_block_till_done()
-    # Reset the mock to only count calls from the event we fire
     hass.services.reset_mock()
 
     hass.bus.async_fire(
