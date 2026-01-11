@@ -1,8 +1,10 @@
 """Test Climate."""
 
+from unittest.mock import AsyncMock
+
 from homeassistant.components.climate.const import HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
 
 from custom_components.hvac_zoning.climate import Thermostat
 
@@ -90,3 +92,58 @@ def test_thermostat_with_unavailable_entities(hass: HomeAssistant) -> None:
     assert thermostat._attr_target_temperature == 72.0
     assert thermostat.current_temperature is None
     assert thermostat.hvac_mode is None
+
+
+async def test_thermostat_restores_target_temperature(hass: HomeAssistant) -> None:
+    """Test thermostat restores target temperature from previous state on restart."""
+    previous_target_temp = 68.0
+
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+
+    mock_state = State(
+        f"climate.{name}",
+        HVACMode.HEAT,
+        {ATTR_TEMPERATURE: previous_target_temp},
+    )
+    thermostat.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await thermostat._async_restore_target_temperature()
+
+    assert thermostat._attr_target_temperature == previous_target_temp
+
+
+async def test_thermostat_uses_default_when_no_previous_state(
+    hass: HomeAssistant,
+) -> None:
+    """Test thermostat uses default target temperature when no previous state exists."""
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+
+    thermostat.async_get_last_state = AsyncMock(return_value=None)
+
+    await thermostat._async_restore_target_temperature()
+
+    assert thermostat._attr_target_temperature == 72.0
+
+
+async def test_thermostat_uses_default_when_previous_state_has_no_temperature(
+    hass: HomeAssistant,
+) -> None:
+    """Test thermostat uses default when previous state has no temperature attribute."""
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+
+    mock_state = State(
+        f"climate.{name}",
+        HVACMode.HEAT,
+        {},
+    )
+    thermostat.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await thermostat._async_restore_target_temperature()
+
+    assert thermostat._attr_target_temperature == 72.0
