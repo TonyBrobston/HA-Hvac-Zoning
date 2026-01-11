@@ -14,13 +14,15 @@ thermostat_entity_id = "climate.living_room_thermostat"
 
 def test_thermostat_default_target_temperature(hass: HomeAssistant) -> None:
     """Test thermostat default target temperature."""
+    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
+
     thermostat = Thermostat(
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
     assert thermostat._attr_target_temperature == 72.0
     assert thermostat._attr_current_temperature is None
-    assert thermostat._attr_hvac_mode is None
+    assert thermostat._attr_hvac_mode == HVACMode.HEAT
 
 
 def test_set_temperature(hass: HomeAssistant) -> None:
