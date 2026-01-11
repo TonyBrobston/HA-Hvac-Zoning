@@ -17,6 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 import homeassistant.util.dt as dt_util
 
 from .const import ACTIVE, DOMAIN, IDLE, LOGGER, SUPPORTED_HVAC_MODES
@@ -184,7 +185,15 @@ def determine_change_in_temperature(
 
 def determine_target_temperature(hass: HomeAssistant, area):
     """Determine thermostat temperature."""
-    entity_id = "climate." + area + "_thermostat"
+    # Use entity registry to get actual entity ID (HA may add suffixes like _2)
+    entity_registry = er.async_get(hass)
+    unique_id = area + "_thermostat"
+    entity_id = entity_registry.async_get_entity_id("climate", DOMAIN, unique_id)
+    if not entity_id:
+        entity_id = "climate." + unique_id
+        LOGGER.info("hvac_zoning: determine_target_temperature: area=%s, unique_id=%s not in registry, using fallback=%s", area, unique_id, entity_id)
+    else:
+        LOGGER.info("hvac_zoning: determine_target_temperature: area=%s, unique_id=%s -> entity_id=%s", area, unique_id, entity_id)
     thermostat = hass.states.get(entity_id)
     LOGGER.info("hvac_zoning: determine_target_temperature: area=%s, entity_id=%s, thermostat=%s", area, entity_id, thermostat)
     if thermostat:
@@ -266,9 +275,29 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
         ]
         thermostat_action = ACTIVE if ACTIVE in actions else IDLE
         LOGGER.info("hvac_zoning: adjust_house: actions=%s, thermostat_action=%s", actions, thermostat_action)
+        # Get entity registry to look up actual entity IDs for virtual thermostats
+        entity_registry = er.async_get(hass)
         for key, values in areas.items():
             LOGGER.info("hvac_zoning: adjust_house: Processing area=%s, values=%s", key, values)
-            area_thermostat = hass.states.get("climate." + key + "_thermostat")
+            # Look up actual entity ID from registry (HA may add suffixes like _2)
+            unique_id = key + "_thermostat"
+            area_thermostat_entity_id = entity_registry.async_get_entity_id("climate", DOMAIN, unique_id)
+            if not area_thermostat_entity_id:
+                area_thermostat_entity_id = "climate." + unique_id
+                LOGGER.info(
+                    "hvac_zoning: adjust_house: area=%s, unique_id=%s not in registry, using fallback=%s",
+                    key,
+                    unique_id,
+                    area_thermostat_entity_id,
+                )
+            else:
+                LOGGER.info(
+                    "hvac_zoning: adjust_house: area=%s, unique_id=%s -> entity_id=%s",
+                    key,
+                    unique_id,
+                    area_thermostat_entity_id,
+                )
+            area_thermostat = hass.states.get(area_thermostat_entity_id)
             area_temperature_sensor = hass.states.get(values["temperature"])
             LOGGER.info(
                 "adjust_house: area=%s, area_thermostat=%s, area_temperature_sensor=%s",
@@ -377,9 +406,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         areas = config_entry_data_with_only_valid_areas.get("areas", {})
         connectivity_entity_ids = get_all_connectivity_entity_ids(areas)
         thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
-        virtual_thermostat_entity_ids = [
-            "climate." + area + "_thermostat" for area in areas
-        ]
+        # Use entity registry to get actual entity IDs for virtual thermostats
+        # (HA may add suffixes like _2 if there are naming conflicts)
+        entity_registry = er.async_get(hass)
+        virtual_thermostat_entity_ids = []
+        for area in areas:
+            unique_id = area + "_thermostat"
+            entry = entity_registry.async_get_entity_id("climate", DOMAIN, unique_id)
+            if entry:
+                virtual_thermostat_entity_ids.append(entry)
+                LOGGER.info(
+                    "hvac_zoning: handle_event_state_changed: Found virtual thermostat unique_id=%s -> entity_id=%s",
+                    unique_id,
+                    entry,
+                )
+            else:
+                # Fallback to constructed name if not found in registry
+                fallback_id = "climate." + unique_id
+                virtual_thermostat_entity_ids.append(fallback_id)
+                LOGGER.info(
+                    "hvac_zoning: handle_event_state_changed: Virtual thermostat unique_id=%s not in registry, using fallback=%s",
+                    unique_id,
+                    fallback_id,
+                )
         thermostat_entity_ids = thermostat_entity_ids + virtual_thermostat_entity_ids
         LOGGER.info(
             "handle_event_state_changed: thermostat_entity_ids=%s, connectivity_entity_ids=%s",
