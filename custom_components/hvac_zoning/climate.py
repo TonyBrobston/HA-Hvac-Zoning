@@ -34,26 +34,14 @@ class Thermostat(ClimateEntity):
         self._attr_name = name
         self._attr_target_temperature = 72.0
 
-        thermostat_state = hass.states.get(thermostat_entity_id)
+        central_thermostat = hass.states.get(thermostat_entity_id)
+        central_hvac_mode = central_thermostat.state
         LOGGER.info(
-            "Initializing thermostat %s: central_thermostat_entity_id=%s, "
-            "thermostat_state=%s, thermostat_state.state=%s",
-            name,
-            thermostat_entity_id,
-            thermostat_state,
-            thermostat_state.state if thermostat_state else None,
+            "central_thermostat: %s: central_hvac_mode=%s",
+            central_thermostat,
+            central_hvac_mode,
         )
-        if thermostat_state is not None and thermostat_state.state in SUPPORTED_HVAC_MODES:
-            self._attr_hvac_mode = thermostat_state.state
-            LOGGER.info(
-                "Set hvac_mode to central thermostat state: %s", self._attr_hvac_mode
-            )
-        else:
-            self._attr_hvac_mode = SUPPORTED_HVAC_MODES[0]
-            LOGGER.info(
-                "Central thermostat state not valid, defaulting hvac_mode to: %s",
-                self._attr_hvac_mode,
-            )
+        self._attr_hvac_mode = central_hvac_mode
 
         def handle_event(event):
             event_dict = event.as_dict()
