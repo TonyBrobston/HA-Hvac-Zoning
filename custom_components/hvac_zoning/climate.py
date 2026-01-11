@@ -59,14 +59,27 @@ class Thermostat(ClimateEntity, RestoreEntity):
 
         await self._async_restore_target_temperature()
 
+        def is_valid_temperature(state) -> bool:
+            if state is None:
+                return False
+            try:
+                float(state.state)
+                return True
+            except (ValueError, TypeError):
+                return False
+
         def handle_state_change(event):
             event_dict = event.as_dict()
             data = event_dict["data"]
             entity_id = data["entity_id"]
-            if (
-                entity_id == self._temperature_sensor_entity_id
-                or entity_id == self._thermostat_entity_id
-            ):
+            if entity_id == self._temperature_sensor_entity_id:
+                old_state = data.get("old_state")
+                new_state = data.get("new_state")
+                if not is_valid_temperature(old_state) and is_valid_temperature(
+                    new_state
+                ):
+                    self.async_write_ha_state()
+            elif entity_id == self._thermostat_entity_id:
                 self.async_write_ha_state()
 
         def handle_ha_started(event):

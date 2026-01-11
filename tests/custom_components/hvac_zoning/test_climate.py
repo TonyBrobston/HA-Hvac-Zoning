@@ -147,3 +147,73 @@ async def test_thermostat_uses_default_when_previous_state_has_no_temperature(
     await thermostat._async_restore_target_temperature()
 
     assert thermostat._attr_target_temperature == 72.0
+
+
+async def test_thermostat_updates_when_temperature_sensor_comes_online(
+    hass: HomeAssistant,
+) -> None:
+    """Test thermostat updates when temperature sensor transitions from unavailable to valid."""
+    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
+
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+    thermostat.async_get_last_state = AsyncMock(return_value=None)
+    thermostat.async_write_ha_state = AsyncMock()
+
+    await thermostat.async_added_to_hass()
+
+    assert thermostat.current_temperature is None
+
+    hass.states.async_set(temperature_sensor_entity_id, "72.5")
+    await hass.async_block_till_done()
+
+    assert thermostat.current_temperature == 72.5
+    thermostat.async_write_ha_state.assert_called()
+
+
+async def test_thermostat_updates_when_temperature_sensor_transitions_from_unknown(
+    hass: HomeAssistant,
+) -> None:
+    """Test thermostat updates when temperature sensor transitions from unknown to valid."""
+    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
+    hass.states.async_set(temperature_sensor_entity_id, "unknown")
+
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+    thermostat.async_get_last_state = AsyncMock(return_value=None)
+    thermostat.async_write_ha_state = AsyncMock()
+
+    await thermostat.async_added_to_hass()
+
+    assert thermostat.current_temperature is None
+
+    hass.states.async_set(temperature_sensor_entity_id, "68.0")
+    await hass.async_block_till_done()
+
+    assert thermostat.current_temperature == 68.0
+    thermostat.async_write_ha_state.assert_called()
+
+
+async def test_thermostat_does_not_update_on_valid_to_valid_temperature_change(
+    hass: HomeAssistant,
+) -> None:
+    """Test thermostat does not call async_write_ha_state on valid to valid temp change."""
+    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
+    hass.states.async_set(temperature_sensor_entity_id, "68.0")
+
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+    thermostat.async_get_last_state = AsyncMock(return_value=None)
+    thermostat.async_write_ha_state = AsyncMock()
+
+    await thermostat.async_added_to_hass()
+
+    thermostat.async_write_ha_state.reset_mock()
+
+    hass.states.async_set(temperature_sensor_entity_id, "69.0")
+    await hass.async_block_till_done()
+
+    thermostat.async_write_ha_state.assert_not_called()
