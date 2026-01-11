@@ -10,7 +10,7 @@ from homeassistant.const import ATTR_TEMPERATURE, EVENT_STATE_CHANGED, UnitOfTem
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import LOGGER, SUPPORTED_HVAC_MODES
+from .const import SUPPORTED_HVAC_MODES
 from .utils import filter_to_valid_areas, get_all_thermostat_entity_ids
 
 
@@ -67,12 +67,6 @@ async def async_setup_entry(
     areas = config_entry_data_with_only_valid_areas.get("areas", {})
     thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     thermostat_entity_id = thermostat_entity_ids[0]
-    LOGGER.info(
-        "async_setup_entry: thermostat_entity_ids=%s, using thermostat_entity_id=%s, areas=%s",
-        thermostat_entity_ids,
-        thermostat_entity_id,
-        list(areas.keys()),
-    )
     async_add_entities(
         [
             Thermostat(
