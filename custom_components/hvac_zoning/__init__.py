@@ -112,12 +112,16 @@ def determine_change_in_temperature(
     actual_temperature: float, hvac_mode: HVACMode, action: str
 ) -> float:
     """Determine change in temperature based on HVAC mode and action."""
-    if hvac_mode in SUPPORTED_HVAC_MODES and action == ACTIVE:
+    if hvac_mode in SUPPORTED_HVAC_MODES:
         match hvac_mode:
             case HVACMode.HEAT:
-                return actual_temperature + 2
-            case HVACMode.COOL:
+                if action == ACTIVE:
+                    return actual_temperature + 2
                 return actual_temperature - 2
+            case HVACMode.COOL:
+                if action == ACTIVE:
+                    return actual_temperature - 2
+                return actual_temperature + 2
     return actual_temperature
 
 
