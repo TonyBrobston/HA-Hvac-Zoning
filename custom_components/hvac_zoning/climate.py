@@ -37,6 +37,8 @@ class Thermostat(ClimateEntity):
         thermostat_state = hass.states.get(thermostat_entity_id)
         if thermostat_state is not None and thermostat_state.state in SUPPORTED_HVAC_MODES:
             self._attr_hvac_mode = thermostat_state.state
+        else:
+            self._attr_hvac_mode = SUPPORTED_HVAC_MODES[0]
 
         def handle_event(event):
             event_dict = event.as_dict()
