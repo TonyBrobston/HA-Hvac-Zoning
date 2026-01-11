@@ -54,6 +54,8 @@ class Thermostat(ClimateEntity):
             self._hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
         )
 
+        self.async_write_ha_state()
+
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature from the temperature sensor."""
