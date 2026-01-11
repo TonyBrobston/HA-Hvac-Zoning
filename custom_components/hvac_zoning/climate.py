@@ -34,7 +34,8 @@ class Thermostat(ClimateEntity):
         self._attr_name = name
         self._attr_target_temperature = 72.0
         central_thermostat = hass.states.get(thermostat_entity_id)
-        self._attr_hvac_mode = central_thermostat.state
+        if central_thermostat is not None:
+            self._attr_hvac_mode = central_thermostat.state
 
         def handle_event(event):
             event_dict = event.as_dict()
