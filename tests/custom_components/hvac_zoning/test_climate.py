@@ -25,6 +25,17 @@ def test_thermostat_default_target_temperature(hass: HomeAssistant) -> None:
     assert thermostat._attr_hvac_mode == HVACMode.HEAT
 
 
+def test_thermostat_hvac_mode_not_set_when_unavailable(hass: HomeAssistant) -> None:
+    """Test thermostat hvac_mode is not set when central thermostat is unavailable."""
+    hass.states.async_set(thermostat_entity_id, "unavailable")
+
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+
+    assert thermostat._attr_hvac_mode is None
+
+
 def test_set_temperature(hass: HomeAssistant) -> None:
     """Test set temperature."""
     thermostat = Thermostat(

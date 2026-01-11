@@ -35,7 +35,7 @@ class Thermostat(ClimateEntity):
         self._attr_target_temperature = 72.0
 
         thermostat_state = hass.states.get(thermostat_entity_id)
-        if thermostat_state is not None:
+        if thermostat_state is not None and thermostat_state.state in SUPPORTED_HVAC_MODES:
             self._attr_hvac_mode = thermostat_state.state
 
         def handle_event(event):
