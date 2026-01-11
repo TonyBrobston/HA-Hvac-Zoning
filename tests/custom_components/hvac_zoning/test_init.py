@@ -206,8 +206,10 @@ def test_determine_cover_service_to_call(
         (68, HVACMode.HEAT, ACTIVE, 70),
         (68, HVACMode.COOL, ACTIVE, 66),
         (68, HVACMode.OFF, ACTIVE, 68),
-        (68, HVACMode.HEAT, IDLE, 68),
+        (68, HVACMode.HEAT, IDLE, 66),
+        (68, HVACMode.COOL, IDLE, 70),
         (68, HVACMode.HEAT_COOL, ACTIVE, 68),
+        (68, HVACMode.OFF, IDLE, 68),
     ],
 )
 def test_determine_change_in_temperature(
