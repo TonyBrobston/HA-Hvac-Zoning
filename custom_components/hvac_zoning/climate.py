@@ -52,7 +52,15 @@ class Thermostat(ClimateEntity):
                 name,
                 central_thermostat.state,
             )
-        self._attr_hvac_mode = central_thermostat.state
+            self._attr_hvac_mode = central_thermostat.state
+        else:
+            LOGGER.warning(
+                "Thermostat.__init__: name=%s, central_thermostat entity %s not available yet, "
+                "hvac_mode will be set when central thermostat state changes",
+                name,
+                thermostat_entity_id,
+            )
+            self._attr_hvac_mode = None
 
         def handle_event(event):
             event_dict = event.as_dict()
@@ -68,6 +76,8 @@ class Thermostat(ClimateEntity):
                     current_temperature,
                 )
                 self._attr_current_temperature = current_temperature
+                if self.hass is not None:
+                    self.schedule_update_ha_state()
             if entity_id == thermostat_entity_id:
                 hvac_mode = data["new_state"].state
                 LOGGER.debug(
@@ -78,6 +88,8 @@ class Thermostat(ClimateEntity):
                     hvac_mode,
                 )
                 self._attr_hvac_mode = hvac_mode
+                if self.hass is not None:
+                    self.schedule_update_ha_state()
 
         LOGGER.debug("Thermostat.__init__: name=%s, registering EVENT_STATE_CHANGED listener", name)
         hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event)
@@ -93,6 +105,9 @@ class Thermostat(ClimateEntity):
             temperature,
         )
         self._attr_target_temperature = temperature
+        if self.hass is not None:
+            LOGGER.debug("Thermostat.set_temperature: name=%s, scheduling HA state update", self._attr_name)
+            self.schedule_update_ha_state()
 
 
 async def async_setup_entry(
