@@ -1,0 +1,67 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "basement": "Basement",
+          "guest_bedroom": "Guest Bedroom",
+          "main_floor": "Main Floor",
+          "master_bedroom": "Master Bedroom",
+          "office": "Office",
+          "upstairs_bathroom": "Upstairs Bathroom"
+        },
+        "description": "Choose which **Smart Vents** you would like to use for these **Areas**.\n \n If you do **NOT** see your **Smart Vent** listed here, be sure the **Smart Vent *Entities* (rather than the *Device*) are explicity assigned to an Area.** \n Confirm you see them here: **Settings -> Areas & zones -> Area -> Entities**"
+      },
+      "second": {
+        "data": {
+          "basement": "Basement",
+          "guest_bedroom": "Guest Bedroom",
+          "main_floor": "Main Floor",
+          "master_bedroom": "Master Bedroom",
+          "office": "Office",
+          "upstairs_bathroom": "Upstairs Bathroom"
+        },
+        "description": "Choose which **Connectivity Sensors** you would like to use for these **Areas**.\n \n If you do **NOT** see your Connectivity Sensors listed here, be sure the **Connectivity Sensor *Entities* (rather than the *Device*) are explicity assigned to an Area.** \n Confirm you see them here: **Settings -> Areas & zones -> Area -> Entities**. \n \n **Connectivity Sensors** are used to determine if a **Battery Powered Smart Vent** is awake and ready for commands."
+      },
+      "third": {
+        "data": {
+          "basement": "Basement",
+          "guest_bedroom": "Guest Bedroom",
+          "main_floor": "Main Floor",
+          "master_bedroom": "Master Bedroom",
+          "office": "Office",
+          "upstairs_bathroom": "Upstairs Bathroom"
+        },
+        "description": "Choose which **Temperature Sensors** you would like to use for these **Areas**.\n \n If you do **NOT** see your Temperature Sensor listed here, be sure the **Temperature Sensor *Entities* (rather than the *Device*) are explicity assigned to an Area.** \n Confirm you see them here: **Settings -> Areas & zones -> Area -> Entities**"
+      },
+      "fourth": {
+        "data": {
+          "basement": "Basement",
+          "guest_bedroom": "Guest Bedroom",
+          "main_floor": "Main Floor",
+          "master_bedroom": "Master Bedroom",
+          "office": "Office",
+          "upstairs_bathroom": "Upstairs Bathroom"
+        },
+        "description": "Choose your **Thermostat**.\n \n If you do **NOT** see your Thermostat listed here, be sure the **Thermostat *Entity* (rather than the *Device*) is explicity assigned to an Area.** \n Confirm you see them here: **Settings -> Areas & zones -> Area -> Entities**"
+      },
+      "fifth": {
+        "data": {
+          "bedrooms": "Bedrooms",
+          "bed_time": "Bed Time",
+          "wake_time": "Wake Time"
+        },
+        "description": "Choose which rooms are **Bedrooms** and set what time to start and stop **Night Time Mode**.\n \n  The goal of this feature is to decrease vent noise while sleeping and to only climate control the **Bedrooms.** At night only **Bedroom** vents will remain open while all other room's vents will remain closed. In addition, the **Thermostat** will change from active to idle (and vice-versa) to meet the **Bedroom's** target temperature. If you do not select any **Bedrooms**, regular vent operation will occur all day and night."
+      },
+      "sixth": {
+        "data": {
+          "control_central_thermostat": "Allow this Integration to control the Central Thermostat?"
+        },
+        "description": "Do you want this Integration to control the **Central Thermostat**?\n \n If you are using this system to control most of or all of your home, we suggest **Yes**; if you are only controlling one or a few **Areas**, we suggest **No**. At the end of this configuration flow we will create one **Virtual Thermostat** per **Area**. If you choose **Yes** you will only control the **Central Thermostat** to adjust the **HVAC Mode** (Heat, Cool, or Off) and this system will control the **Central Thermostat** target temperature based on all the area's target and actual temperatures. If you choose **No** you can use your **Central Thermostat** as normal and this system will only look at the **Central Thermostat** to check **HVAC Mode** because this is one of the inputs needed to determine whether an area has met its target temperature or not."
+      }
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  }
+}
