@@ -28,7 +28,7 @@ PLATFORMS: list[Platform] = [Platform.CLIMATE]
 def get_all_cover_entity_ids(areas):
     """Get all cover entity ids."""
     covers = [cover for area in areas.values() for cover in area.get("covers", [])]
-    LOGGER.debug("get_all_cover_entity_ids: Found covers=%s", covers)
+    LOGGER.debug("hvac_zoning: get_all_cover_entity_ids: Found covers=%s", covers)
     return covers
 
 
@@ -37,21 +37,21 @@ def get_all_connectivity_entity_ids(areas):
     connectivities = [
         cover for area in areas.values() for cover in area.get("connectivities", [])
     ]
-    LOGGER.debug("get_all_connectivity_entity_ids: Found connectivities=%s", connectivities)
+    LOGGER.debug("hvac_zoning: get_all_connectivity_entity_ids: Found connectivities=%s", connectivities)
     return connectivities
 
 
 def get_all_temperature_entity_ids(areas):
     """Get all temperature entity ids."""
     temps = [area["temperature"] for area in areas.values() if "temperature" in area]
-    LOGGER.debug("get_all_temperature_entity_ids: Found temperature_sensors=%s", temps)
+    LOGGER.debug("hvac_zoning: get_all_temperature_entity_ids: Found temperature_sensors=%s", temps)
     return temps
 
 
 def determine_if_night_time_mode(areas):
     """Determine if night time mode."""
     result = any(area.get("bedroom", False) for area in areas.values())
-    LOGGER.debug("determine_if_night_time_mode: areas=%s, result=%s", list(areas.keys()), result)
+    LOGGER.debug("hvac_zoning: determine_if_night_time_mode: areas=%s, result=%s", list(areas.keys()), result)
     return result
 
 
@@ -78,11 +78,11 @@ def determine_action(target_temperature: int, actual_temperature: int, hvac_mode
         match hvac_mode:
             case HVACMode.HEAT:
                 if modified_actual_temperature >= modified_target_temperature:
-                    LOGGER.debug("determine_action: HEAT mode, actual >= target, returning IDLE")
+                    LOGGER.debug("hvac_zoning: determine_action: HEAT mode, actual >= target, returning IDLE")
                     return IDLE
             case HVACMode.COOL:
                 if modified_actual_temperature <= modified_target_temperature:
-                    LOGGER.debug("determine_action: COOL mode, actual <= target, returning IDLE")
+                    LOGGER.debug("hvac_zoning: determine_action: COOL mode, actual <= target, returning IDLE")
                     return IDLE
     else:
         LOGGER.debug(
@@ -92,14 +92,14 @@ def determine_action(target_temperature: int, actual_temperature: int, hvac_mode
             actual_temperature is not None,
         )
 
-    LOGGER.debug("determine_action: returning ACTIVE")
+    LOGGER.debug("hvac_zoning: determine_action: returning ACTIVE")
     return ACTIVE
 
 
 def determine_is_night_time(bed_time, wake_time):
     """Determine is night time."""
     now = dt_util.now()
-    LOGGER.debug("determine_is_night_time: bed_time=%s, wake_time=%s, now=%s", bed_time, wake_time, now)
+    LOGGER.debug("hvac_zoning: determine_is_night_time: bed_time=%s, wake_time=%s, now=%s", bed_time, wake_time, now)
     bed_time = datetime.time.fromisoformat(bed_time)
     wake_time = datetime.time.fromisoformat(wake_time)
 
@@ -108,14 +108,14 @@ def determine_is_night_time(bed_time, wake_time):
         and (now.time() > bed_time or now.time() < wake_time)
         or (bed_time <= wake_time and now.time() >= bed_time and now.time() < wake_time)
     )
-    LOGGER.debug("determine_is_night_time: result=%s", result)
+    LOGGER.debug("hvac_zoning: determine_is_night_time: result=%s", result)
     return result
 
 
 def filter_to_bedrooms(areas):
     """Filter to bedrooms."""
     bedrooms = {key: value for key, value in areas.items() if value.get("bedroom", False)}
-    LOGGER.debug("filter_to_bedrooms: input_areas=%s, bedrooms=%s", list(areas.keys()), list(bedrooms.keys()))
+    LOGGER.debug("hvac_zoning: filter_to_bedrooms: input_areas=%s, bedrooms=%s", list(areas.keys()), list(bedrooms.keys()))
     return bedrooms
 
 
@@ -144,17 +144,17 @@ def determine_cover_service_to_call(
     )
     if is_night_time_mode and is_night_time:
         result = SERVICE_OPEN_COVER if is_bedroom else SERVICE_CLOSE_COVER
-        LOGGER.debug("determine_cover_service_to_call: Night time mode active, is_bedroom=%s, returning %s", is_bedroom, result)
+        LOGGER.debug("hvac_zoning: determine_cover_service_to_call: Night time mode active, is_bedroom=%s, returning %s", is_bedroom, result)
         return result
     action = (
         ACTIVE
         if thermostat_action == IDLE and control_central_thermostat is True
         else determine_action(target_temperature, actual_temperature, hvac_mode)
     )
-    LOGGER.debug("determine_cover_service_to_call: action=%s (thermostat_action=%s, control_central_thermostat=%s)", action, thermostat_action, control_central_thermostat)
+    LOGGER.debug("hvac_zoning: determine_cover_service_to_call: action=%s (thermostat_action=%s, control_central_thermostat=%s)", action, thermostat_action, control_central_thermostat)
 
     result = SERVICE_CLOSE_COVER if action is not ACTIVE else SERVICE_OPEN_COVER
-    LOGGER.debug("determine_cover_service_to_call: returning %s", result)
+    LOGGER.debug("hvac_zoning: determine_cover_service_to_call: returning %s", result)
     return result
 
 
@@ -172,13 +172,13 @@ def determine_change_in_temperature(
         match hvac_mode:
             case HVACMode.HEAT:
                 result = actual_temperature + 2
-                LOGGER.debug("determine_change_in_temperature: HEAT mode, returning %s", result)
+                LOGGER.debug("hvac_zoning: determine_change_in_temperature: HEAT mode, returning %s", result)
                 return result
             case HVACMode.COOL:
                 result = actual_temperature - 2
-                LOGGER.debug("determine_change_in_temperature: COOL mode, returning %s", result)
+                LOGGER.debug("hvac_zoning: determine_change_in_temperature: COOL mode, returning %s", result)
                 return result
-    LOGGER.debug("determine_change_in_temperature: No change, returning %s", actual_temperature)
+    LOGGER.debug("hvac_zoning: determine_change_in_temperature: No change, returning %s", actual_temperature)
     return actual_temperature
 
 
@@ -186,15 +186,15 @@ def determine_target_temperature(hass: HomeAssistant, area):
     """Determine thermostat temperature."""
     entity_id = "climate." + area + "_thermostat"
     thermostat = hass.states.get(entity_id)
-    LOGGER.debug("determine_target_temperature: area=%s, entity_id=%s, thermostat=%s", area, entity_id, thermostat)
+    LOGGER.debug("hvac_zoning: determine_target_temperature: area=%s, entity_id=%s, thermostat=%s", area, entity_id, thermostat)
     if thermostat:
-        LOGGER.debug("determine_target_temperature: thermostat.attributes=%s", thermostat.attributes)
+        LOGGER.debug("hvac_zoning: determine_target_temperature: thermostat.attributes=%s", thermostat.attributes)
     result = (
         thermostat.attributes["temperature"]
         if thermostat and "temperature" in thermostat.attributes
         else None
     )
-    LOGGER.debug("determine_target_temperature: returning %s", result)
+    LOGGER.debug("hvac_zoning: determine_target_temperature: returning %s", result)
     return result
 
 
@@ -202,26 +202,26 @@ def determine_actual_temperature(hass: HomeAssistant, devices):
     """Determine thermostat temperature."""
     entity_id = devices["temperature"]
     temperature_sensor = hass.states.get(entity_id)
-    LOGGER.debug("determine_actual_temperature: entity_id=%s, temperature_sensor=%s", entity_id, temperature_sensor)
+    LOGGER.debug("hvac_zoning: determine_actual_temperature: entity_id=%s, temperature_sensor=%s", entity_id, temperature_sensor)
     result = temperature_sensor.state if temperature_sensor else None
-    LOGGER.debug("determine_actual_temperature: returning %s", result)
+    LOGGER.debug("hvac_zoning: determine_actual_temperature: returning %s", result)
     return result
 
 
 def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
     """Adjust house."""
-    LOGGER.info("adjust_house: Starting house adjustment")
+    LOGGER.info("hvac_zoning: adjust_house: Starting house adjustment")
     config_entry_data = config_entry.as_dict()["data"]
-    LOGGER.debug("adjust_house: config_entry_data=%s", config_entry_data)
+    LOGGER.debug("hvac_zoning: adjust_house: config_entry_data=%s", config_entry_data)
     central_thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
-    LOGGER.debug("adjust_house: central_thermostat_entity_ids=%s", central_thermostat_entity_ids)
+    LOGGER.debug("hvac_zoning: adjust_house: central_thermostat_entity_ids=%s", central_thermostat_entity_ids)
     if not central_thermostat_entity_ids:
-        LOGGER.warning("adjust_house: No central thermostat entity IDs found, exiting")
+        LOGGER.warning("hvac_zoning: adjust_house: No central thermostat entity IDs found, exiting")
         return
     central_thermostat = hass.states.get(central_thermostat_entity_ids[0])
-    LOGGER.debug("adjust_house: central_thermostat=%s", central_thermostat)
+    LOGGER.debug("hvac_zoning: adjust_house: central_thermostat=%s", central_thermostat)
     if central_thermostat:
-        LOGGER.debug("adjust_house: central_thermostat.state=%s, central_thermostat.attributes=%s", central_thermostat.state, central_thermostat.attributes)
+        LOGGER.debug("hvac_zoning: adjust_house: central_thermostat.state=%s, central_thermostat.attributes=%s", central_thermostat.state, central_thermostat.attributes)
     if central_thermostat and "current_temperature" in central_thermostat.attributes:
         central_thermostat_actual_temperature = central_thermostat.attributes[
             "current_temperature"
@@ -236,7 +236,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             config_entry_data
         )
         areas = config_entry_data_with_only_valid_areas.get("areas", {})
-        LOGGER.debug("adjust_house: valid areas=%s", list(areas.keys()))
+        LOGGER.debug("hvac_zoning: adjust_house: valid areas=%s", list(areas.keys()))
         bedroom_areas = filter_to_bedrooms(areas)
         is_night_time_mode = determine_if_night_time_mode(areas)
         is_night_time = determine_is_night_time(
@@ -251,11 +251,11 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
         control_central_thermostat = config_entry_data.get(
             "control_central_thermostat", False
         )
-        LOGGER.debug("adjust_house: control_central_thermostat=%s", control_central_thermostat)
+        LOGGER.debug("hvac_zoning: adjust_house: control_central_thermostat=%s", control_central_thermostat)
         thermostat_areas = (
             bedroom_areas if is_night_time_mode and is_night_time else areas
         )
-        LOGGER.debug("adjust_house: thermostat_areas=%s", list(thermostat_areas.keys()))
+        LOGGER.debug("hvac_zoning: adjust_house: thermostat_areas=%s", list(thermostat_areas.keys()))
         actions = [
             determine_action(
                 determine_target_temperature(hass, area),
@@ -265,9 +265,9 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             for area, devices in thermostat_areas.items()
         ]
         thermostat_action = ACTIVE if ACTIVE in actions else IDLE
-        LOGGER.info("adjust_house: actions=%s, thermostat_action=%s", actions, thermostat_action)
+        LOGGER.info("hvac_zoning: adjust_house: actions=%s, thermostat_action=%s", actions, thermostat_action)
         for key, values in areas.items():
-            LOGGER.debug("adjust_house: Processing area=%s, values=%s", key, values)
+            LOGGER.debug("hvac_zoning: adjust_house: Processing area=%s, values=%s", key, values)
             area_thermostat = hass.states.get("climate." + key + "_thermostat")
             area_temperature_sensor = hass.states.get(values["temperature"])
             LOGGER.debug(
@@ -277,7 +277,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                 area_temperature_sensor,
             )
             if area_thermostat:
-                LOGGER.debug("adjust_house: area=%s, area_thermostat.attributes=%s", key, area_thermostat.attributes)
+                LOGGER.debug("hvac_zoning: adjust_house: area=%s, area_thermostat.attributes=%s", key, area_thermostat.attributes)
             if (
                 area_thermostat
                 and "temperature" in area_thermostat.attributes
@@ -311,7 +311,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                     covers,
                 )
                 for cover in covers:
-                    LOGGER.info("adjust_house: Calling service %s for cover %s", service_to_call, cover)
+                    LOGGER.info("hvac_zoning: adjust_house: Calling service %s for cover %s", service_to_call, cover)
                     hass.services.call(
                         Platform.COVER,
                         service_to_call,
@@ -344,7 +344,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                     ATTR_TEMPERATURE: new_temp,
                 },
             )
-        LOGGER.info("adjust_house: House adjustment complete")
+        LOGGER.info("hvac_zoning: adjust_house: House adjustment complete")
     else:
         LOGGER.warning(
             "adjust_house: Central thermostat not available or missing current_temperature attribute. "
@@ -356,14 +356,14 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up HVAC Zoning from a config entry."""
-    LOGGER.info("async_setup_entry: Starting HVAC Zoning setup")
-    LOGGER.debug("async_setup_entry: config_entry=%s", config_entry.as_dict())
+    LOGGER.info("hvac_zoning: async_setup_entry: Starting HVAC Zoning setup")
+    LOGGER.debug("hvac_zoning: async_setup_entry: config_entry=%s", config_entry.as_dict())
 
     hass.data.setdefault(DOMAIN, {})
 
-    LOGGER.debug("async_setup_entry: Forwarding entry setups for platforms=%s", PLATFORMS)
+    LOGGER.debug("hvac_zoning: async_setup_entry: Forwarding entry setups for platforms=%s", PLATFORMS)
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-    LOGGER.info("async_setup_entry: Platform setup complete")
+    LOGGER.info("hvac_zoning: async_setup_entry: Platform setup complete")
 
     def handle_event_state_changed(event):
         event_dict = event.as_dict()
@@ -415,12 +415,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 entity_id,
             )
 
-    LOGGER.info("async_setup_entry: Registering EVENT_STATE_CHANGED listener")
+    LOGGER.info("hvac_zoning: async_setup_entry: Registering EVENT_STATE_CHANGED listener")
     config_entry.async_on_unload(
         hass.bus.async_listen(EVENT_STATE_CHANGED, handle_event_state_changed)
     )
 
-    LOGGER.info("async_setup_entry: HVAC Zoning setup complete")
+    LOGGER.info("hvac_zoning: async_setup_entry: HVAC Zoning setup complete")
     return True
 
 

@@ -6,7 +6,7 @@ from .const import LOGGER
 def filter_to_valid_areas(config_entry_data):
     """Filter to valid areas."""
     areas = config_entry_data.get("areas", {})
-    LOGGER.debug("filter_to_valid_areas: input areas=%s", list(areas.keys()))
+    LOGGER.debug("hvac_zoning: filter_to_valid_areas: input areas=%s", list(areas.keys()))
     valid_areas = {
         key: value
         for key, value in areas.items()
@@ -18,7 +18,7 @@ def filter_to_valid_areas(config_entry_data):
             "filter_to_valid_areas: filtered out areas=%s (no covers configured)",
             invalid_areas,
         )
-    LOGGER.debug("filter_to_valid_areas: valid areas=%s", list(valid_areas.keys()))
+    LOGGER.debug("hvac_zoning: filter_to_valid_areas: valid areas=%s", list(valid_areas.keys()))
     return {
         **config_entry_data,
         "areas": valid_areas,
@@ -27,11 +27,11 @@ def filter_to_valid_areas(config_entry_data):
 
 def get_all_thermostat_entity_ids(config_entry_data):
     """Get thermostat entity ids."""
-    LOGGER.debug("get_all_thermostat_entity_ids: config_entry_data areas=%s", list(config_entry_data.get("areas", {}).keys()))
+    LOGGER.debug("hvac_zoning: get_all_thermostat_entity_ids: config_entry_data areas=%s", list(config_entry_data.get("areas", {}).keys()))
     thermostat_ids = [
         area["climate"]
         for area in config_entry_data.get("areas", {}).values()
         if "climate" in area
     ]
-    LOGGER.debug("get_all_thermostat_entity_ids: found thermostat_ids=%s", thermostat_ids)
+    LOGGER.debug("hvac_zoning: get_all_thermostat_entity_ids: found thermostat_ids=%s", thermostat_ids)
     return thermostat_ids
