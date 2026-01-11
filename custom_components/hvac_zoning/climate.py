@@ -14,12 +14,13 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import SUPPORTED_HVAC_MODES
 from .utils import filter_to_valid_areas, get_all_thermostat_entity_ids
 
 
-class Thermostat(ClimateEntity):
+class Thermostat(ClimateEntity, RestoreEntity):
     """Thermostat."""
 
     _attr_temperature_unit = UnitOfTemperature.FAHRENHEIT
@@ -41,9 +42,22 @@ class Thermostat(ClimateEntity):
         self._temperature_sensor_entity_id = temperature_sensor_entity_id
         self._thermostat_entity_id = thermostat_entity_id
 
+    async def _async_restore_target_temperature(self) -> None:
+        """Restore target temperature from previous state."""
+        last_state = await self.async_get_last_state()
+        if last_state is not None:
+            last_target_temp = last_state.attributes.get(ATTR_TEMPERATURE)
+            if last_target_temp is not None:
+                try:
+                    self._attr_target_temperature = float(last_target_temp)
+                except (ValueError, TypeError):
+                    pass
+
     async def async_added_to_hass(self) -> None:
         """Run when entity is added to hass."""
         await super().async_added_to_hass()
+
+        await self._async_restore_target_temperature()
 
         def handle_state_change(event):
             event_dict = event.as_dict()
