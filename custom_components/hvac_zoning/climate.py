@@ -35,7 +35,7 @@ class Thermostat(ClimateEntity):
         self._attr_target_temperature = 72.0
 
         thermostat_state = hass.states.get(thermostat_entity_id)
-        LOGGER.debug(
+        LOGGER.info(
             "Initializing thermostat %s: central_thermostat_entity_id=%s, "
             "thermostat_state=%s, thermostat_state.state=%s",
             name,
@@ -45,12 +45,12 @@ class Thermostat(ClimateEntity):
         )
         if thermostat_state is not None and thermostat_state.state in SUPPORTED_HVAC_MODES:
             self._attr_hvac_mode = thermostat_state.state
-            LOGGER.debug(
+            LOGGER.info(
                 "Set hvac_mode to central thermostat state: %s", self._attr_hvac_mode
             )
         else:
             self._attr_hvac_mode = SUPPORTED_HVAC_MODES[0]
-            LOGGER.debug(
+            LOGGER.info(
                 "Central thermostat state not valid, defaulting hvac_mode to: %s",
                 self._attr_hvac_mode,
             )
@@ -86,7 +86,7 @@ async def async_setup_entry(
     areas = config_entry_data_with_only_valid_areas.get("areas", {})
     thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     thermostat_entity_id = thermostat_entity_ids[0]
-    LOGGER.debug(
+    LOGGER.info(
         "async_setup_entry: thermostat_entity_ids=%s, using thermostat_entity_id=%s, areas=%s",
         thermostat_entity_ids,
         thermostat_entity_id,
