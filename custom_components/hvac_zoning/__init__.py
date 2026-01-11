@@ -17,6 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 import homeassistant.util.dt as dt_util
 
 from .const import ACTIVE, DOMAIN, IDLE, LOGGER, SUPPORTED_HVAC_MODES
@@ -122,7 +123,12 @@ def determine_change_in_temperature(
 
 def determine_target_temperature(hass: HomeAssistant, area):
     """Determine thermostat temperature."""
-    thermostat = hass.states.get("climate." + area + "_thermostat")
+    entity_registry = async_get_entity_registry(hass)
+    area_thermostat_unique_id = area + "_thermostat"
+    area_thermostat_entity_id = entity_registry.async_get_entity_id(
+        "climate", DOMAIN, area_thermostat_unique_id
+    )
+    thermostat = hass.states.get(area_thermostat_entity_id)
     return (
         thermostat.attributes["temperature"]
         if thermostat and "temperature" in thermostat.attributes
@@ -138,6 +144,7 @@ def determine_actual_temperature(hass: HomeAssistant, devices):
 
 def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
     """Adjust house."""
+    LOGGER.debug("[HVAC Zoning] adjust_house: Starting house adjustment")
     config_entry_data = config_entry.as_dict()["data"]
     central_thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
     central_thermostat = hass.states.get(central_thermostat_entity_ids[0])
@@ -146,6 +153,12 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             "current_temperature"
         ]
         central_hvac_mode = central_thermostat.state
+        LOGGER.debug(
+            "[HVAC Zoning] adjust_house: Central thermostat state - "
+            "hvac_mode=%s, current_temp=%s",
+            central_hvac_mode,
+            central_thermostat_actual_temperature,
+        )
         config_entry_data_with_only_valid_areas = filter_to_valid_areas(
             config_entry_data
         )
@@ -157,6 +170,13 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
         )
         control_central_thermostat = config_entry_data.get(
             "control_central_thermostat", False
+        )
+        LOGGER.debug(
+            "[HVAC Zoning] adjust_house: Night mode settings - "
+            "is_night_time_mode=%s, is_night_time=%s, control_central_thermostat=%s",
+            is_night_time_mode,
+            is_night_time,
+            control_central_thermostat,
         )
         thermostat_areas = (
             bedroom_areas if is_night_time_mode and is_night_time else areas
@@ -170,9 +190,14 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             for area, devices in thermostat_areas.items()
         ]
         thermostat_action = ACTIVE if ACTIVE in actions else IDLE
-        for key, values in areas.items():
-            area_thermostat = hass.states.get("climate." + key + "_thermostat")
-            area_temperature_sensor = hass.states.get(values["temperature"])
+        entity_registry = async_get_entity_registry(hass)
+        for area_name, area_config in areas.items():
+            area_thermostat_unique_id = area_name + "_thermostat"
+            area_thermostat_entity_id = entity_registry.async_get_entity_id(
+                "climate", DOMAIN, area_thermostat_unique_id
+            )
+            area_thermostat = hass.states.get(area_thermostat_entity_id)
+            area_temperature_sensor = hass.states.get(area_config["temperature"])
             if (
                 area_thermostat
                 and "temperature" in area_thermostat.attributes
@@ -180,7 +205,7 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
             ):
                 area_actual_temperature = int(float(area_temperature_sensor.state))
                 area_target_temperature = area_thermostat.attributes["temperature"]
-                is_bedroom = values["bedroom"]
+                is_bedroom = area_config["bedroom"]
                 service_to_call = determine_cover_service_to_call(
                     area_target_temperature,
                     area_actual_temperature,
@@ -191,11 +216,20 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                     is_bedroom,
                     control_central_thermostat,
                 )
-                covers = values["covers"]
-                LOGGER.info(
-                    f"\nservice_to_call: {service_to_call}"
-                    f"\ncovers: {covers}"
-                    "\n--------------------------------------------------------"
+                covers = area_config["covers"]
+                cover_action = (
+                    "opening" if service_to_call == SERVICE_OPEN_COVER else "closing"
+                )
+                LOGGER.debug(
+                    "[HVAC Zoning] adjust_house: Area '%s' - target_temp=%s, actual_temp=%s, "
+                    "is_bedroom=%s, thermostat_action=%s, %s covers %s",
+                    area_name,
+                    area_target_temperature,
+                    area_actual_temperature,
+                    is_bedroom,
+                    thermostat_action,
+                    cover_action,
+                    covers,
                 )
                 for cover in covers:
                     hass.services.call(
@@ -204,16 +238,24 @@ def adjust_house(hass: HomeAssistant, config_entry: ConfigEntry):
                         service_data={ATTR_ENTITY_ID: cover},
                     )
         if control_central_thermostat:
+            new_target_temp = determine_change_in_temperature(
+                central_thermostat_actual_temperature,
+                central_hvac_mode,
+                thermostat_action,
+            )
+            LOGGER.debug(
+                "[HVAC Zoning] adjust_house: Adjusting central thermostat - "
+                "entity_id=%s, thermostat_action=%s, new_target_temp=%s",
+                central_thermostat_entity_ids[0],
+                thermostat_action,
+                new_target_temp,
+            )
             hass.services.call(
                 Platform.CLIMATE,
                 SERVICE_SET_TEMPERATURE,
                 service_data={
                     ATTR_ENTITY_ID: central_thermostat_entity_ids[0],
-                    ATTR_TEMPERATURE: determine_change_in_temperature(
-                        central_thermostat_actual_temperature,
-                        central_hvac_mode,
-                        thermostat_action,
-                    ),
+                    ATTR_TEMPERATURE: new_target_temp,
                 },
             )
 
@@ -238,20 +280,39 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         connectivity_entity_ids = get_all_connectivity_entity_ids(areas)
         # temperature_entity_ids = get_all_temperature_entity_ids(areas)
         thermostat_entity_ids = get_all_thermostat_entity_ids(config_entry_data)
-        virtual_thermostat_entity_ids = [
-            "climate." + area + "_thermostat" for area in areas
-        ]
+        entity_registry = async_get_entity_registry(hass)
+        virtual_thermostat_entity_ids = []
+        for area_name in areas:
+            area_thermostat_unique_id = area_name + "_thermostat"
+            area_thermostat_entity_id = entity_registry.async_get_entity_id(
+                "climate", DOMAIN, area_thermostat_unique_id
+            )
+            if area_thermostat_entity_id:
+                virtual_thermostat_entity_ids.append(area_thermostat_entity_id)
         thermostat_entity_ids = thermostat_entity_ids + virtual_thermostat_entity_ids
-        if entity_id in thermostat_entity_ids or (
+        old_state = data.get("old_state")
+        new_state = data.get("new_state")
+        is_thermostat_change = entity_id in thermostat_entity_ids
+        is_connectivity_change = (
             entity_id in connectivity_entity_ids
-            and data["old_state"].state == STATE_OFF
-            and data["new_state"].state == STATE_ON
-        ):
-            LOGGER.info(
-                f"\nentity_id: {data['entity_id']}"
-                + (f"\nold_state: {data['old_state']}" if "old_state" in data else "")
-                + (f"\nnew_state: {data['new_state']}" if "new_state" in data else "")
-                + "\n--------------------------------------------------------"
+            and old_state is not None
+            and new_state is not None
+            and old_state.state == STATE_OFF
+            and new_state.state == STATE_ON
+        )
+        if is_thermostat_change or is_connectivity_change:
+            trigger_type = (
+                "thermostat" if is_thermostat_change else "connectivity sensor"
+            )
+            old_state_str = old_state.state if old_state is not None else "unknown"
+            new_state_str = new_state.state if new_state is not None else "unknown"
+            LOGGER.debug(
+                "[HVAC Zoning] handle_event_state_changed: Triggered by %s change - "
+                "entity_id=%s, old_state=%s, new_state=%s",
+                trigger_type,
+                entity_id,
+                old_state_str,
+                new_state_str,
             )
             adjust_house(hass, config_entry)
 

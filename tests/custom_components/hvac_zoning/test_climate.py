@@ -87,3 +87,14 @@ def test_set_hvac_mode(hass: HomeAssistant) -> None:
     )
 
     assert thermostat._attr_hvac_mode == HVACMode.COOL
+
+
+def test_thermostat_with_unavailable_central_thermostat(hass: HomeAssistant) -> None:
+    """Test thermostat initialization when central thermostat is not yet available."""
+    thermostat = Thermostat(
+        hass, name, temperature_sensor_entity_id, thermostat_entity_id
+    )
+
+    assert thermostat._attr_target_temperature == 72.0
+    assert thermostat._attr_current_temperature is None
+    assert thermostat._attr_hvac_mode is None
