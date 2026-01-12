@@ -7,7 +7,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock, None, None]:
+def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
         "custom_components.hvac_zoning.async_setup_entry", return_value=True
