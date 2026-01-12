@@ -127,8 +127,10 @@ def test_filter_excludes_off_connectivity_sensors(
     hass.states.async_set("binary_sensor.connected_sensor", "on")
     hass.states.async_set("binary_sensor.disconnected_sensor", STATE_OFF)
 
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
+    entity_names = (
+        filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+            hass, entities, device_class
+        )
     )
 
     assert entity_names == [
@@ -137,12 +139,36 @@ def test_filter_excludes_off_connectivity_sensors(
 
 
 @pytest.mark.parametrize(
-    ("device_class", "available_entity_id", "unavailable_entity_id", "original_device_class", "available_state"),
+    (
+        "device_class",
+        "available_entity_id",
+        "unavailable_entity_id",
+        "original_device_class",
+        "available_state",
+    ),
     [
         ("damper", "cover.available_vent", "cover.unavailable_vent", "damper", "open"),
-        ("temperature", "sensor.available_temp", "sensor.unavailable_temp", "temperature", "68.0"),
-        ("connectivity", "binary_sensor.available_connectivity", "binary_sensor.unavailable_connectivity", "connectivity", "on"),
-        ("climate", "climate.available_thermostat", "climate.unavailable_thermostat", None, "heat"),
+        (
+            "temperature",
+            "sensor.available_temp",
+            "sensor.unavailable_temp",
+            "temperature",
+            "68.0",
+        ),
+        (
+            "connectivity",
+            "binary_sensor.available_connectivity",
+            "binary_sensor.unavailable_connectivity",
+            "connectivity",
+            "on",
+        ),
+        (
+            "climate",
+            "climate.available_thermostat",
+            "climate.unavailable_thermostat",
+            None,
+            "heat",
+        ),
     ],
 )
 def test_filter_excludes_unavailable_entities(
@@ -178,8 +204,10 @@ def test_filter_excludes_unavailable_entities(
     hass.states.async_set(available_entity_id, available_state)
     hass.states.async_set(unavailable_entity_id, STATE_UNAVAILABLE)
 
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
+    entity_names = (
+        filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+            hass, entities, device_class
+        )
     )
 
     assert entity_names == [

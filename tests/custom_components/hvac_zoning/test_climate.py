@@ -2,10 +2,10 @@
 
 from unittest.mock import AsyncMock
 
-import pytest
 from homeassistant.components.climate.const import HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant, State
+import pytest
 
 from custom_components.hvac_zoning.climate import Thermostat
 
@@ -159,9 +159,7 @@ async def test_thermostat_uses_default_when_previous_state_has_no_temperature(
         (None, []),
     ],
 )
-def test_hvac_modes(
-    hass: HomeAssistant, thermostat_state, expected_hvac_modes
-) -> None:
+def test_hvac_modes(hass: HomeAssistant, thermostat_state, expected_hvac_modes) -> None:
     """Test hvac_modes returns only the current mode or empty list."""
     if thermostat_state is not None:
         hass.states.async_set(thermostat_entity_id, thermostat_state)
