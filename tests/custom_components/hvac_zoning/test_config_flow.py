@@ -81,38 +81,21 @@ from homeassistant.helpers.entity_registry import RegistryEntry
 #         ]
 
 
-def test_is_entity_available_returns_true_for_available_entity(
-    hass: HomeAssistant,
-) -> None:
-    """Test is_entity_available returns True for available entity."""
-    hass.states.async_set("cover.test_vent", "open")
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [
+        ("open", True),
+        (STATE_UNAVAILABLE, False),
+        (None, False),
+        (STATE_UNKNOWN, False),
+    ],
+)
+def test_is_entity_available(hass: HomeAssistant, state, expected) -> None:
+    """Test is_entity_available returns correct result based on entity state."""
+    if state is not None:
+        hass.states.async_set("cover.test_vent", state)
 
-    assert is_entity_available(hass, "cover.test_vent") is True
-
-
-def test_is_entity_available_returns_false_for_unavailable_entity(
-    hass: HomeAssistant,
-) -> None:
-    """Test is_entity_available returns False for unavailable entity."""
-    hass.states.async_set("cover.test_vent", STATE_UNAVAILABLE)
-
-    assert is_entity_available(hass, "cover.test_vent") is False
-
-
-def test_is_entity_available_returns_false_for_nonexistent_entity(
-    hass: HomeAssistant,
-) -> None:
-    """Test is_entity_available returns False for nonexistent entity."""
-    assert is_entity_available(hass, "cover.nonexistent_vent") is False
-
-
-def test_is_entity_available_returns_false_for_unknown_entity(
-    hass: HomeAssistant,
-) -> None:
-    """Test is_entity_available returns False for entity with unknown state."""
-    hass.states.async_set("cover.test_vent", STATE_UNKNOWN)
-
-    assert is_entity_available(hass, "cover.test_vent") is False
+    assert is_entity_available(hass, "cover.test_vent") is expected
 
 
 def test_filter_excludes_unknown_connectivity_sensors(
@@ -189,147 +172,54 @@ def test_filter_excludes_off_connectivity_sensors(
     ]
 
 
-def test_filter_excludes_unavailable_vents(
+@pytest.mark.parametrize(
+    ("device_class", "available_entity_id", "unavailable_entity_id", "original_device_class", "available_state"),
+    [
+        ("damper", "cover.available_vent", "cover.unavailable_vent", "damper", "open"),
+        ("temperature", "sensor.available_temp", "sensor.unavailable_temp", "temperature", "68.0"),
+        ("connectivity", "binary_sensor.available_connectivity", "binary_sensor.unavailable_connectivity", "connectivity", "on"),
+        ("climate", "climate.available_thermostat", "climate.unavailable_thermostat", None, "heat"),
+    ],
+)
+def test_filter_excludes_unavailable_entities(
     hass: HomeAssistant,
+    device_class,
+    available_entity_id,
+    unavailable_entity_id,
+    original_device_class,
+    available_state,
 ) -> None:
-    """Test that unavailable vents are excluded from the config flow options."""
-    device_class = "damper"
+    """Test that unavailable entities are excluded from the config flow options."""
+    available_name = available_entity_id.split(".")[1].replace("_", " ").title()
+    unavailable_name = unavailable_entity_id.split(".")[1].replace("_", " ").title()
     entities = [
         RegistryEntry(
-            entity_id="cover.available_vent",
-            unique_id="Available Vent",
+            entity_id=available_entity_id,
+            unique_id=available_name,
             platform="hvac_stubs",
-            id="available_vent_id",
-            original_name="Available Vent",
-            original_device_class="damper",
+            id=f"{available_entity_id}_id",
+            original_name=available_name,
+            original_device_class=original_device_class,
         ),
         RegistryEntry(
-            entity_id="cover.unavailable_vent",
-            unique_id="Unavailable Vent",
+            entity_id=unavailable_entity_id,
+            unique_id=unavailable_name,
             platform="hvac_stubs",
-            id="unavailable_vent_id",
-            original_name="Unavailable Vent",
-            original_device_class="damper",
+            id=f"{unavailable_entity_id}_id",
+            original_name=unavailable_name,
+            original_device_class=original_device_class,
         ),
     ]
 
-    hass.states.async_set("cover.available_vent", "open")
-    hass.states.async_set("cover.unavailable_vent", STATE_UNAVAILABLE)
+    hass.states.async_set(available_entity_id, available_state)
+    hass.states.async_set(unavailable_entity_id, STATE_UNAVAILABLE)
 
     entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
         hass, entities, device_class
     )
 
     assert entity_names == [
-        {"label": "Available Vent", "value": "cover.available_vent"},
-    ]
-
-
-def test_filter_excludes_unavailable_temperature_sensors(
-    hass: HomeAssistant,
-) -> None:
-    """Test that unavailable temperature sensors are excluded from the config flow options."""
-    device_class = "temperature"
-    entities = [
-        RegistryEntry(
-            entity_id="sensor.available_temp",
-            unique_id="Available Temp",
-            platform="hvac_stubs",
-            id="available_temp_id",
-            original_name="Available Temp",
-            original_device_class="temperature",
-        ),
-        RegistryEntry(
-            entity_id="sensor.unavailable_temp",
-            unique_id="Unavailable Temp",
-            platform="hvac_stubs",
-            id="unavailable_temp_id",
-            original_name="Unavailable Temp",
-            original_device_class="temperature",
-        ),
-    ]
-
-    hass.states.async_set("sensor.available_temp", "68.0")
-    hass.states.async_set("sensor.unavailable_temp", STATE_UNAVAILABLE)
-
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
-    )
-
-    assert entity_names == [
-        {"label": "Available Temp", "value": "sensor.available_temp"},
-    ]
-
-
-def test_filter_excludes_unavailable_connectivity_sensors(
-    hass: HomeAssistant,
-) -> None:
-    """Test that unavailable connectivity sensors are excluded from the config flow options."""
-    device_class = "connectivity"
-    entities = [
-        RegistryEntry(
-            entity_id="binary_sensor.available_connectivity",
-            unique_id="Available Connectivity",
-            platform="hvac_stubs",
-            id="available_connectivity_id",
-            original_name="Available Connectivity",
-            original_device_class="connectivity",
-        ),
-        RegistryEntry(
-            entity_id="binary_sensor.unavailable_connectivity",
-            unique_id="Unavailable Connectivity",
-            platform="hvac_stubs",
-            id="unavailable_connectivity_id",
-            original_name="Unavailable Connectivity",
-            original_device_class="connectivity",
-        ),
-    ]
-
-    hass.states.async_set("binary_sensor.available_connectivity", "on")
-    hass.states.async_set("binary_sensor.unavailable_connectivity", STATE_UNAVAILABLE)
-
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
-    )
-
-    assert entity_names == [
-        {"label": "Available Connectivity", "value": "binary_sensor.available_connectivity"},
-    ]
-
-
-def test_filter_excludes_unavailable_thermostats(
-    hass: HomeAssistant,
-) -> None:
-    """Test that unavailable thermostats are excluded from the config flow options."""
-    device_class = "climate"
-    entities = [
-        RegistryEntry(
-            entity_id="climate.available_thermostat",
-            unique_id="Available Thermostat",
-            platform="hvac_stubs",
-            id="available_thermostat_id",
-            original_name="Available Thermostat",
-            original_device_class=None,
-        ),
-        RegistryEntry(
-            entity_id="climate.unavailable_thermostat",
-            unique_id="Unavailable Thermostat",
-            platform="hvac_stubs",
-            id="unavailable_thermostat_id",
-            original_name="Unavailable Thermostat",
-            original_device_class=None,
-        ),
-    ]
-
-    hass.states.async_set("climate.available_thermostat", "heat")
-    hass.states.async_set("climate.unavailable_thermostat", STATE_UNAVAILABLE)
-
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
-    )
-
-    assert entity_names == [
-        {"label": "Available Thermostat", "value": "climate.available_thermostat"},
+        {"label": available_name, "value": available_entity_id},
     ]
 
 
