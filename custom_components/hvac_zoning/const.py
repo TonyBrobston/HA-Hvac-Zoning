@@ -1,4 +1,5 @@
 """Constants for the HVAC Zoning integration."""
+
 import logging
 
 from homeassistant.components.climate import HVACMode
