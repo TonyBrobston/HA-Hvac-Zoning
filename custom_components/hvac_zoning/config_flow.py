@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import voluptuous as vol
+
+_LOGGER = logging.getLogger(__name__)
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
@@ -35,8 +38,19 @@ def is_entity_available(hass, entity_id):
     """Check if an entity is available."""
     state = hass.states.get(entity_id)
     if state is None:
+        _LOGGER.debug(
+            "Entity %s: state is None (not in state machine), filtering out",
+            entity_id,
+        )
         return False
-    return state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+    is_available = state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+    _LOGGER.debug(
+        "Entity %s: state='%s', is_available=%s",
+        entity_id,
+        state.state,
+        is_available,
+    )
+    return is_available
 
 
 def filter_entities_to_device_class_and_map_to_entity_ids(hass, entities, device_class):
@@ -74,13 +88,27 @@ def filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
     hass, entities, device_class
 ):
     """Map entities to entity names."""
-    return [
-        {"value": entity.entity_id, "label": entity.original_name}
-        for entity in entities
-        if device_class
-        in (entity.original_device_class, entity.entity_id.split(".")[0])
-        and is_entity_available(hass, entity.entity_id)
-    ]
+    _LOGGER.debug(
+        "Filtering entities for device_class='%s', total entities in area: %d",
+        device_class,
+        len(entities),
+    )
+    result = []
+    for entity in entities:
+        matches_device_class = device_class in (
+            entity.original_device_class,
+            entity.entity_id.split(".")[0],
+        )
+        _LOGGER.debug(
+            "Entity %s: original_device_class='%s', matches_device_class=%s",
+            entity.entity_id,
+            entity.original_device_class,
+            matches_device_class,
+        )
+        if matches_device_class and is_entity_available(hass, entity.entity_id):
+            result.append({"value": entity.entity_id, "label": entity.original_name})
+    _LOGGER.debug("Filtered result: %s", result)
+    return result
 
 
 async def get_options(self, area, device_class):
