@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from homeassistant import data_entry_flow
+from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
 from custom_components.hvac_zoning import config_flow
 from custom_components.hvac_zoning.config_flow import (
     convert_bedroom_input_to_config_entry,
@@ -15,6 +16,7 @@ from custom_components.hvac_zoning.config_flow import (
     get_all_rooms,
     get_defaults,
     get_options,
+    is_entity_available,
     merge_user_input,
 )
 from custom_components.hvac_zoning.const import DOMAIN
@@ -79,9 +81,115 @@ from homeassistant.helpers.entity_registry import RegistryEntry
 #         ]
 
 
-def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict() -> (
-    None
-):
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [
+        ("open", True),
+        (STATE_UNAVAILABLE, False),
+        (None, False),
+        (STATE_UNKNOWN, False),
+    ],
+)
+def test_is_entity_available(hass: HomeAssistant, state, expected) -> None:
+    """Test is_entity_available returns correct result based on entity state."""
+    if state is not None:
+        hass.states.async_set("cover.test_vent", state)
+
+    assert is_entity_available(hass, "cover.test_vent") is expected
+
+
+def test_filter_excludes_off_connectivity_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test that connectivity sensors with off state (disconnected) are excluded from the config flow options."""
+    from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+
+    device_class = BinarySensorDeviceClass.CONNECTIVITY
+    entities = [
+        RegistryEntry(
+            entity_id="binary_sensor.connected_sensor",
+            unique_id="Connected Sensor",
+            platform="hvac_stubs",
+            id="connected_sensor_id",
+            original_name="Connected Sensor",
+            original_device_class="connectivity",
+        ),
+        RegistryEntry(
+            entity_id="binary_sensor.disconnected_sensor",
+            unique_id="Disconnected Sensor",
+            platform="hvac_stubs",
+            id="disconnected_sensor_id",
+            original_name="Disconnected Sensor",
+            original_device_class="connectivity",
+        ),
+    ]
+
+    hass.states.async_set("binary_sensor.connected_sensor", "on")
+    hass.states.async_set("binary_sensor.disconnected_sensor", STATE_OFF)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Connected Sensor", "value": "binary_sensor.connected_sensor"},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("device_class", "available_entity_id", "unavailable_entity_id", "original_device_class", "available_state"),
+    [
+        ("damper", "cover.available_vent", "cover.unavailable_vent", "damper", "open"),
+        ("temperature", "sensor.available_temp", "sensor.unavailable_temp", "temperature", "68.0"),
+        ("connectivity", "binary_sensor.available_connectivity", "binary_sensor.unavailable_connectivity", "connectivity", "on"),
+        ("climate", "climate.available_thermostat", "climate.unavailable_thermostat", None, "heat"),
+    ],
+)
+def test_filter_excludes_unavailable_entities(
+    hass: HomeAssistant,
+    device_class,
+    available_entity_id,
+    unavailable_entity_id,
+    original_device_class,
+    available_state,
+) -> None:
+    """Test that unavailable entities are excluded from the config flow options."""
+    available_name = available_entity_id.split(".")[1].replace("_", " ").title()
+    unavailable_name = unavailable_entity_id.split(".")[1].replace("_", " ").title()
+    entities = [
+        RegistryEntry(
+            entity_id=available_entity_id,
+            unique_id=available_name,
+            platform="hvac_stubs",
+            id=f"{available_entity_id}_id",
+            original_name=available_name,
+            original_device_class=original_device_class,
+        ),
+        RegistryEntry(
+            entity_id=unavailable_entity_id,
+            unique_id=unavailable_name,
+            platform="hvac_stubs",
+            id=f"{unavailable_entity_id}_id",
+            original_name=unavailable_name,
+            original_device_class=original_device_class,
+        ),
+    ]
+
+    hass.states.async_set(available_entity_id, available_state)
+    hass.states.async_set(unavailable_entity_id, STATE_UNAVAILABLE)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": available_name, "value": available_entity_id},
+    ]
+
+
+def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+    hass: HomeAssistant,
+) -> None:
     """Test map entities to entity names."""
     device_class = "damper"
     entities = [
@@ -119,9 +227,14 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
         ),
     ]
 
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
+    hass.states.async_set("cover.basement_southeast_vent", "open")
+
     entity_names = (
         filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-            entities, device_class
+            hass, entities, device_class
         )
     )
 
@@ -132,9 +245,9 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
     ]
 
 
-def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict_climate() -> (
-    None
-):
+def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict_climate(
+    hass: HomeAssistant,
+) -> None:
     """Test map entities to entity names."""
     device_class = "climate"
     entities = [
@@ -156,9 +269,12 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
         ),
     ]
 
+    hass.states.async_set("climate.living_room_thermostat", "heat")
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+
     entity_names = (
         filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-            entities, device_class
+            hass, entities, device_class
         )
     )
 
@@ -167,7 +283,9 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
     ]
 
 
-def test_filter_entities_to_device_class_and_map_to_entity_names() -> None:
+def test_filter_entities_to_device_class_and_map_to_entity_names(
+    hass: HomeAssistant,
+) -> None:
     """Test map entities to entity names."""
     device_class = "damper"
     entities = [
@@ -197,8 +315,12 @@ def test_filter_entities_to_device_class_and_map_to_entity_names() -> None:
         ),
     ]
 
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
+
     entity_names = filter_entities_to_device_class_and_map_to_entity_ids(
-        entities, device_class
+        hass, entities, device_class
     )
 
     assert entity_names == [
@@ -265,6 +387,10 @@ async def test_get_defaults(
         picture=None,
     )
 
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
+
     with patch(
         "custom_components.hvac_zoning.config_flow.get_entities_for_area",
         return_value=entities,
@@ -312,6 +438,10 @@ async def test_get_options(hass: HomeAssistant) -> None:
         icon=None,
         picture=None,
     )
+
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
 
     with patch(
         "custom_components.hvac_zoning.config_flow.get_entities_for_area",

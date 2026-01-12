@@ -10,6 +10,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.area_registry import AreaRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, async_entries_for_area
 from homeassistant.helpers.selector import (
@@ -30,13 +31,25 @@ async def get_areas(self):
     return list(areaRegistry.async_list_areas())
 
 
-def filter_entities_to_device_class_and_map_to_entity_ids(entities, device_class):
+def is_entity_available(hass, entity_id, device_class=None):
+    """Check if an entity is available."""
+    state = hass.states.get(entity_id)
+    if state is None:
+        return False
+    unavailable_states = [STATE_UNAVAILABLE, STATE_UNKNOWN]
+    if device_class == BinarySensorDeviceClass.CONNECTIVITY:
+        unavailable_states.append(STATE_OFF)
+    return state.state not in unavailable_states
+
+
+def filter_entities_to_device_class_and_map_to_entity_ids(hass, entities, device_class):
     """Map entities to entity names."""
     return [
         entity.entity_id
         for entity in entities
         if device_class
         in (entity.original_device_class, entity.entity_id.split(".")[0])
+        and is_entity_available(hass, entity.entity_id, device_class)
     ]
 
 
@@ -51,6 +64,7 @@ async def get_defaults(self, area, device_class, multiple):
     """Get defaults for form."""
     entities_for_area = await get_entities_for_area(self, area.id)
     entity_ids = filter_entities_to_device_class_and_map_to_entity_ids(
+        self.hass,
         entities_for_area,
         device_class,
     )
@@ -60,7 +74,7 @@ async def get_defaults(self, area, device_class, multiple):
 
 
 def filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-    entities, device_class
+    hass, entities, device_class
 ):
     """Map entities to entity names."""
     return [
@@ -68,6 +82,7 @@ def filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
         for entity in entities
         if device_class
         in (entity.original_device_class, entity.entity_id.split(".")[0])
+        and is_entity_available(hass, entity.entity_id, device_class)
     ]
 
 
@@ -75,6 +90,7 @@ async def get_options(self, area, device_class):
     """Get options for form."""
     entities_for_area = await get_entities_for_area(self, area.id)
     return filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        self.hass,
         entities_for_area,
         device_class,
     )
