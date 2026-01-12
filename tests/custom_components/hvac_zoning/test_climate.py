@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock
 
+import pytest
 from homeassistant.components.climate.const import HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant, State
@@ -149,48 +150,27 @@ async def test_thermostat_uses_default_when_previous_state_has_no_temperature(
     assert thermostat._attr_target_temperature == 72.0
 
 
-def test_hvac_modes_returns_only_current_mode_heat(hass: HomeAssistant) -> None:
-    """Test hvac_modes returns only the current mode when in heat mode."""
-    hass.states.async_set(thermostat_entity_id, HVACMode.HEAT)
-
-    thermostat = Thermostat(
-        hass, name, temperature_sensor_entity_id, thermostat_entity_id
-    )
-
-    assert thermostat.hvac_modes == [HVACMode.HEAT]
-
-
-def test_hvac_modes_returns_only_current_mode_cool(hass: HomeAssistant) -> None:
-    """Test hvac_modes returns only the current mode when in cool mode."""
-    hass.states.async_set(thermostat_entity_id, HVACMode.COOL)
-
-    thermostat = Thermostat(
-        hass, name, temperature_sensor_entity_id, thermostat_entity_id
-    )
-
-    assert thermostat.hvac_modes == [HVACMode.COOL]
-
-
-def test_hvac_modes_returns_empty_list_when_thermostat_unavailable(
-    hass: HomeAssistant,
+@pytest.mark.parametrize(
+    ("thermostat_state", "expected_hvac_modes"),
+    [
+        (HVACMode.HEAT, [HVACMode.HEAT]),
+        (HVACMode.COOL, [HVACMode.COOL]),
+        ("invalid_mode", []),
+        (None, []),
+    ],
+)
+def test_hvac_modes(
+    hass: HomeAssistant, thermostat_state, expected_hvac_modes
 ) -> None:
-    """Test hvac_modes returns empty list when central thermostat is unavailable."""
-    thermostat = Thermostat(
-        hass, name, temperature_sensor_entity_id, thermostat_entity_id
-    )
-
-    assert thermostat.hvac_modes == []
-
-
-def test_hvac_modes_returns_empty_list_when_invalid_mode(hass: HomeAssistant) -> None:
-    """Test hvac_modes returns empty list when central thermostat has invalid mode."""
-    hass.states.async_set(thermostat_entity_id, "invalid_mode")
+    """Test hvac_modes returns only the current mode or empty list."""
+    if thermostat_state is not None:
+        hass.states.async_set(thermostat_entity_id, thermostat_state)
 
     thermostat = Thermostat(
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
-    assert thermostat.hvac_modes == []
+    assert thermostat.hvac_modes == expected_hvac_modes
 
 
 def test_hvac_modes_updates_with_thermostat_state(hass: HomeAssistant) -> None:
@@ -223,12 +203,22 @@ def test_set_hvac_mode_does_nothing(hass: HomeAssistant) -> None:
     assert thermostat.hvac_mode == HVACMode.HEAT
 
 
-def test_hvac_mode_returns_none_for_invalid_mode(hass: HomeAssistant) -> None:
-    """Test hvac_mode returns None when central thermostat has invalid mode."""
-    hass.states.async_set(thermostat_entity_id, "invalid_mode")
+@pytest.mark.parametrize(
+    ("thermostat_state", "expected_hvac_mode"),
+    [
+        ("invalid_mode", None),
+        (None, None),
+    ],
+)
+def test_hvac_mode_returns_none(
+    hass: HomeAssistant, thermostat_state, expected_hvac_mode
+) -> None:
+    """Test hvac_mode returns None for invalid or unavailable thermostat."""
+    if thermostat_state is not None:
+        hass.states.async_set(thermostat_entity_id, thermostat_state)
 
     thermostat = Thermostat(
         hass, name, temperature_sensor_entity_id, thermostat_entity_id
     )
 
-    assert thermostat.hvac_mode is None
+    assert thermostat.hvac_mode == expected_hvac_mode
