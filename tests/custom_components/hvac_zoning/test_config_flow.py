@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from homeassistant import data_entry_flow
+from homeassistant.const import STATE_UNAVAILABLE
 from custom_components.hvac_zoning import config_flow
 from custom_components.hvac_zoning.config_flow import (
     convert_bedroom_input_to_config_entry,
@@ -15,6 +16,7 @@ from custom_components.hvac_zoning.config_flow import (
     get_all_rooms,
     get_defaults,
     get_options,
+    is_entity_available,
     merge_user_input,
 )
 from custom_components.hvac_zoning.const import DOMAIN
@@ -79,9 +81,213 @@ from homeassistant.helpers.entity_registry import RegistryEntry
 #         ]
 
 
-def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict() -> (
-    None
-):
+def test_is_entity_available_returns_true_for_available_entity(
+    hass: HomeAssistant,
+) -> None:
+    """Test is_entity_available returns True for available entity."""
+    hass.states.async_set("cover.test_vent", "open")
+
+    assert is_entity_available(hass, "cover.test_vent") is True
+
+
+def test_is_entity_available_returns_false_for_unavailable_entity(
+    hass: HomeAssistant,
+) -> None:
+    """Test is_entity_available returns False for unavailable entity."""
+    hass.states.async_set("cover.test_vent", STATE_UNAVAILABLE)
+
+    assert is_entity_available(hass, "cover.test_vent") is False
+
+
+def test_is_entity_available_returns_false_for_nonexistent_entity(
+    hass: HomeAssistant,
+) -> None:
+    """Test is_entity_available returns False for nonexistent entity."""
+    assert is_entity_available(hass, "cover.nonexistent_vent") is False
+
+
+def test_filter_excludes_unavailable_vents(
+    hass: HomeAssistant,
+) -> None:
+    """Test that unavailable vents are excluded from the config flow options."""
+    device_class = "damper"
+    entities = [
+        RegistryEntry(
+            entity_id="cover.available_vent",
+            unique_id="Available Vent",
+            platform="hvac_stubs",
+            id="available_vent_id",
+            original_name="Available Vent",
+            original_device_class="damper",
+        ),
+        RegistryEntry(
+            entity_id="cover.unavailable_vent",
+            unique_id="Unavailable Vent",
+            platform="hvac_stubs",
+            id="unavailable_vent_id",
+            original_name="Unavailable Vent",
+            original_device_class="damper",
+        ),
+    ]
+
+    hass.states.async_set("cover.available_vent", "open")
+    hass.states.async_set("cover.unavailable_vent", STATE_UNAVAILABLE)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Available Vent", "value": "cover.available_vent"},
+    ]
+
+
+def test_filter_excludes_unavailable_temperature_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test that unavailable temperature sensors are excluded from the config flow options."""
+    device_class = "temperature"
+    entities = [
+        RegistryEntry(
+            entity_id="sensor.available_temp",
+            unique_id="Available Temp",
+            platform="hvac_stubs",
+            id="available_temp_id",
+            original_name="Available Temp",
+            original_device_class="temperature",
+        ),
+        RegistryEntry(
+            entity_id="sensor.unavailable_temp",
+            unique_id="Unavailable Temp",
+            platform="hvac_stubs",
+            id="unavailable_temp_id",
+            original_name="Unavailable Temp",
+            original_device_class="temperature",
+        ),
+    ]
+
+    hass.states.async_set("sensor.available_temp", "68.0")
+    hass.states.async_set("sensor.unavailable_temp", STATE_UNAVAILABLE)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Available Temp", "value": "sensor.available_temp"},
+    ]
+
+
+def test_filter_excludes_unavailable_connectivity_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test that unavailable connectivity sensors are excluded from the config flow options."""
+    device_class = "connectivity"
+    entities = [
+        RegistryEntry(
+            entity_id="binary_sensor.available_connectivity",
+            unique_id="Available Connectivity",
+            platform="hvac_stubs",
+            id="available_connectivity_id",
+            original_name="Available Connectivity",
+            original_device_class="connectivity",
+        ),
+        RegistryEntry(
+            entity_id="binary_sensor.unavailable_connectivity",
+            unique_id="Unavailable Connectivity",
+            platform="hvac_stubs",
+            id="unavailable_connectivity_id",
+            original_name="Unavailable Connectivity",
+            original_device_class="connectivity",
+        ),
+    ]
+
+    hass.states.async_set("binary_sensor.available_connectivity", "on")
+    hass.states.async_set("binary_sensor.unavailable_connectivity", STATE_UNAVAILABLE)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Available Connectivity", "value": "binary_sensor.available_connectivity"},
+    ]
+
+
+def test_filter_excludes_unavailable_thermostats(
+    hass: HomeAssistant,
+) -> None:
+    """Test that unavailable thermostats are excluded from the config flow options."""
+    device_class = "climate"
+    entities = [
+        RegistryEntry(
+            entity_id="climate.available_thermostat",
+            unique_id="Available Thermostat",
+            platform="hvac_stubs",
+            id="available_thermostat_id",
+            original_name="Available Thermostat",
+            original_device_class=None,
+        ),
+        RegistryEntry(
+            entity_id="climate.unavailable_thermostat",
+            unique_id="Unavailable Thermostat",
+            platform="hvac_stubs",
+            id="unavailable_thermostat_id",
+            original_name="Unavailable Thermostat",
+            original_device_class=None,
+        ),
+    ]
+
+    hass.states.async_set("climate.available_thermostat", "heat")
+    hass.states.async_set("climate.unavailable_thermostat", STATE_UNAVAILABLE)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Available Thermostat", "value": "climate.available_thermostat"},
+    ]
+
+
+def test_filter_excludes_nonexistent_entities(
+    hass: HomeAssistant,
+) -> None:
+    """Test that entities without state (not in hass.states) are excluded."""
+    device_class = "damper"
+    entities = [
+        RegistryEntry(
+            entity_id="cover.available_vent",
+            unique_id="Available Vent",
+            platform="hvac_stubs",
+            id="available_vent_id",
+            original_name="Available Vent",
+            original_device_class="damper",
+        ),
+        RegistryEntry(
+            entity_id="cover.nonexistent_vent",
+            unique_id="Nonexistent Vent",
+            platform="hvac_stubs",
+            id="nonexistent_vent_id",
+            original_name="Nonexistent Vent",
+            original_device_class="damper",
+        ),
+    ]
+
+    hass.states.async_set("cover.available_vent", "open")
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Available Vent", "value": "cover.available_vent"},
+    ]
+
+
+def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+    hass: HomeAssistant,
+) -> None:
     """Test map entities to entity names."""
     device_class = "damper"
     entities = [
@@ -119,9 +325,14 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
         ),
     ]
 
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
+    hass.states.async_set("cover.basement_southeast_vent", "open")
+
     entity_names = (
         filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-            entities, device_class
+            hass, entities, device_class
         )
     )
 
@@ -132,9 +343,9 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
     ]
 
 
-def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict_climate() -> (
-    None
-):
+def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict_climate(
+    hass: HomeAssistant,
+) -> None:
     """Test map entities to entity names."""
     device_class = "climate"
     entities = [
@@ -156,9 +367,12 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
         ),
     ]
 
+    hass.states.async_set("climate.living_room_thermostat", "heat")
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+
     entity_names = (
         filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-            entities, device_class
+            hass, entities, device_class
         )
     )
 
@@ -167,7 +381,9 @@ def test_filter_entities_to_device_class_and_map_to_value_and_label_array_of_dic
     ]
 
 
-def test_filter_entities_to_device_class_and_map_to_entity_names() -> None:
+def test_filter_entities_to_device_class_and_map_to_entity_names(
+    hass: HomeAssistant,
+) -> None:
     """Test map entities to entity names."""
     device_class = "damper"
     entities = [
@@ -197,8 +413,12 @@ def test_filter_entities_to_device_class_and_map_to_entity_names() -> None:
         ),
     ]
 
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
+
     entity_names = filter_entities_to_device_class_and_map_to_entity_ids(
-        entities, device_class
+        hass, entities, device_class
     )
 
     assert entity_names == [
@@ -265,6 +485,10 @@ async def test_get_defaults(
         picture=None,
     )
 
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
+
     with patch(
         "custom_components.hvac_zoning.config_flow.get_entities_for_area",
         return_value=entities,
@@ -312,6 +536,10 @@ async def test_get_options(hass: HomeAssistant) -> None:
         icon=None,
         picture=None,
     )
+
+    hass.states.async_set("sensor.basement_temperature", "68.0")
+    hass.states.async_set("cover.basement_west_vent", "open")
+    hass.states.async_set("cover.basement_northeast_vent", "open")
 
     with patch(
         "custom_components.hvac_zoning.config_flow.get_entities_for_area",
