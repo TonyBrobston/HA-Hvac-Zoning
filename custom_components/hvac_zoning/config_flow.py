@@ -13,7 +13,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.area_registry import AreaRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, async_entries_for_area
 from homeassistant.helpers.selector import (
@@ -34,7 +34,7 @@ async def get_areas(self):
     return list(areaRegistry.async_list_areas())
 
 
-def is_entity_available(hass, entity_id):
+def is_entity_available(hass, entity_id, device_class=None):
     """Check if an entity is available."""
     state = hass.states.get(entity_id)
     if state is None:
@@ -43,11 +43,15 @@ def is_entity_available(hass, entity_id):
             entity_id,
         )
         return False
-    is_available = state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+    unavailable_states = [STATE_UNAVAILABLE, STATE_UNKNOWN]
+    if device_class == BinarySensorDeviceClass.CONNECTIVITY:
+        unavailable_states.append(STATE_OFF)
+    is_available = state.state not in unavailable_states
     _LOGGER.debug(
-        "Entity %s: state='%s', is_available=%s",
+        "Entity %s: state='%s', device_class='%s', is_available=%s",
         entity_id,
         state.state,
+        device_class,
         is_available,
     )
     return is_available
@@ -60,7 +64,7 @@ def filter_entities_to_device_class_and_map_to_entity_ids(hass, entities, device
         for entity in entities
         if device_class
         in (entity.original_device_class, entity.entity_id.split(".")[0])
-        and is_entity_available(hass, entity.entity_id)
+        and is_entity_available(hass, entity.entity_id, device_class)
     ]
 
 
@@ -105,7 +109,7 @@ def filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
             entity.original_device_class,
             matches_device_class,
         )
-        if matches_device_class and is_entity_available(hass, entity.entity_id):
+        if matches_device_class and is_entity_available(hass, entity.entity_id, device_class):
             result.append({"value": entity.entity_id, "label": entity.original_name})
     _LOGGER.debug("Filtered result: %s", result)
     return result

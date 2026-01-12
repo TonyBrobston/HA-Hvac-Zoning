@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from homeassistant import data_entry_flow
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
 from custom_components.hvac_zoning import config_flow
 from custom_components.hvac_zoning.config_flow import (
     convert_bedroom_input_to_config_entry,
@@ -148,6 +148,44 @@ def test_filter_excludes_unknown_connectivity_sensors(
 
     assert entity_names == [
         {"label": "Available Connectivity", "value": "binary_sensor.available_connectivity"},
+    ]
+
+
+def test_filter_excludes_off_connectivity_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test that connectivity sensors with off state (disconnected) are excluded from the config flow options."""
+    from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+
+    device_class = BinarySensorDeviceClass.CONNECTIVITY
+    entities = [
+        RegistryEntry(
+            entity_id="binary_sensor.connected_sensor",
+            unique_id="Connected Sensor",
+            platform="hvac_stubs",
+            id="connected_sensor_id",
+            original_name="Connected Sensor",
+            original_device_class="connectivity",
+        ),
+        RegistryEntry(
+            entity_id="binary_sensor.disconnected_sensor",
+            unique_id="Disconnected Sensor",
+            platform="hvac_stubs",
+            id="disconnected_sensor_id",
+            original_name="Disconnected Sensor",
+            original_device_class="connectivity",
+        ),
+    ]
+
+    hass.states.async_set("binary_sensor.connected_sensor", "on")
+    hass.states.async_set("binary_sensor.disconnected_sensor", STATE_OFF)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Connected Sensor", "value": "binary_sensor.connected_sensor"},
     ]
 
 
