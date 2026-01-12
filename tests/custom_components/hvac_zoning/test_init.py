@@ -426,6 +426,7 @@ async def test_async_setup_entry(hass: HomeAssistant) -> None:
         data=data,
         state=ConfigEntryState.LOADED,
     )
+    config_entry.add_to_hass(hass)
     hass.states.async_set(
         entity_id=central_thermostat_entity_id,
         new_state="heat",
@@ -504,6 +505,7 @@ async def test_async_setup_entry_damper_wake(hass: HomeAssistant) -> None:
         },
         state=ConfigEntryState.LOADED,
     )
+    config_entry.add_to_hass(hass)
     hass.states.async_set(
         entity_id=central_thermostat_entity_id,
         new_state="heat",
@@ -628,6 +630,7 @@ async def test_async_setup_entry_connectivity_old_state_none(
         },
         state=ConfigEntryState.LOADED,
     )
+    config_entry.add_to_hass(hass)
     hass.states.async_set(
         entity_id=central_thermostat_entity_id,
         new_state="heat",

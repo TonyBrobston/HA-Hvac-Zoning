@@ -381,10 +381,12 @@ async def test_get_defaults(
     area_entry = AreaEntry(
         id=area_name,
         name=area_name,
-        aliases=[],
-        floor_id=1,
+        aliases=set(),
+        floor_id=None,
         icon=None,
         picture=None,
+        humidity_entity_id=None,
+        temperature_entity_id=None,
     )
 
     hass.states.async_set("sensor.basement_temperature", "68.0")
@@ -433,10 +435,12 @@ async def test_get_options(hass: HomeAssistant) -> None:
     area_entry = AreaEntry(
         id="basement",
         name="basement",
-        aliases=[],
-        floor_id=1,
+        aliases=set(),
+        floor_id=None,
         icon=None,
         picture=None,
+        humidity_entity_id=None,
+        temperature_entity_id=None,
     )
 
     hass.states.async_set("sensor.basement_temperature", "68.0")
