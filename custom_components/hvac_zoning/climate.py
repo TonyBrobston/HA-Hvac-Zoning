@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    ATTR_TEMPERATURE,
-    UnitOfTemperature,
-)
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -46,10 +44,8 @@ class Thermostat(ClimateEntity, RestoreEntity):
         if last_state is not None:
             last_target_temp = last_state.attributes.get(ATTR_TEMPERATURE)
             if last_target_temp is not None:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     self._attr_target_temperature = float(last_target_temp)
-                except (ValueError, TypeError):
-                    pass
 
     async def async_added_to_hass(self) -> None:
         """Run when entity is added to hass."""

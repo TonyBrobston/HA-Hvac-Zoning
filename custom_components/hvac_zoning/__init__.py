@@ -75,8 +75,8 @@ def determine_is_night_time(bed_time, wake_time):
     wake_time = datetime.time.fromisoformat(wake_time)
 
     return (
-        bed_time > wake_time
-        and (now.time() > bed_time or now.time() < wake_time)
+        (bed_time > wake_time
+        and (now.time() > bed_time or now.time() < wake_time))
         or (bed_time <= wake_time and now.time() >= bed_time and now.time() < wake_time)
     )
 

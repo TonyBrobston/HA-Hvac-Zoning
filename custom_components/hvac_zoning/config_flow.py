@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import voluptuous as vol
-
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
@@ -20,6 +18,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TimeSelector,
 )
+import voluptuous as vol
 
 from .const import DOMAIN
 
@@ -165,7 +164,7 @@ def convert_connectivities_input_to_config_entry(config_entry, user_input):
 def convert_bedroom_input_to_config_entry(config_entry, user_input):
     """Convert bedroom input to config entry."""
     bedrooms = user_input.get("bedrooms", [])
-    bedroom_config_entry = {bedroom: True for bedroom in bedrooms}
+    bedroom_config_entry = dict.fromkeys(bedrooms, True)
     rooms = get_all_rooms(config_entry.get("areas", {}), bedroom_config_entry)
     return {room: room in bedrooms for room in rooms}
 

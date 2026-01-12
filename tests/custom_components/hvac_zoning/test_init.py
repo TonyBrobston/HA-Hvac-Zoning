@@ -3,23 +3,8 @@
 from unittest.mock import MagicMock, call
 
 from freezegun import freeze_time
-import pytest
-
 from homeassistant import core
 from homeassistant.components.climate import SERVICE_SET_TEMPERATURE, HVACMode
-from custom_components.hvac_zoning import (
-    adjust_house,
-    async_setup_entry,
-    determine_action,
-    determine_change_in_temperature,
-    determine_cover_service_to_call,
-    determine_if_night_time_mode,
-    determine_is_night_time,
-    filter_to_bedrooms,
-    get_all_cover_entity_ids,
-    get_all_temperature_entity_ids,
-)
-from custom_components.hvac_zoning.const import ACTIVE, DOMAIN, IDLE
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -34,7 +19,21 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+import pytest
 
+from custom_components.hvac_zoning import (
+    adjust_house,
+    async_setup_entry,
+    determine_action,
+    determine_change_in_temperature,
+    determine_cover_service_to_call,
+    determine_if_night_time_mode,
+    determine_is_night_time,
+    filter_to_bedrooms,
+    get_all_cover_entity_ids,
+    get_all_temperature_entity_ids,
+)
+from custom_components.hvac_zoning.const import ACTIVE, DOMAIN, IDLE
 from tests.common import MockConfigEntry
 
 
