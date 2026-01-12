@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature
+from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -14,7 +14,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from .const import SUPPORTED_HVAC_MODES
 from .utils import filter_to_valid_areas, get_all_thermostat_entity_ids
 
 
@@ -23,7 +22,6 @@ class Thermostat(ClimateEntity, RestoreEntity):
 
     _attr_temperature_unit = UnitOfTemperature.FAHRENHEIT
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
-    _attr_hvac_modes = SUPPORTED_HVAC_MODES
 
     def __init__(
         self,
@@ -69,12 +67,34 @@ class Thermostat(ClimateEntity, RestoreEntity):
         return None
 
     @property
-    def hvac_mode(self) -> str | None:
+    def hvac_mode(self) -> HVACMode | None:
         """Return the current HVAC mode from the central thermostat."""
         central_thermostat = self._hass.states.get(self._thermostat_entity_id)
         if central_thermostat is not None:
-            return central_thermostat.state
+            try:
+                return HVACMode(central_thermostat.state)
+            except ValueError:
+                return None
         return None
+
+    @property
+    def hvac_modes(self) -> list[HVACMode]:
+        """Return the list of available HVAC modes.
+
+        Only returns the current mode to prevent users from changing it.
+        The HVAC mode is controlled by the central thermostat.
+        """
+        current_mode = self.hvac_mode
+        if current_mode is not None:
+            return [current_mode]
+        return []
+
+    def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Set HVAC mode - disabled for virtual thermostats.
+
+        The HVAC mode is controlled by the central thermostat and cannot
+        be changed on virtual thermostats.
+        """
 
     def set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
