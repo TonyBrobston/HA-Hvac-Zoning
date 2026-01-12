@@ -44,3 +44,7 @@ To use this integration, you need the following devices integrated into Home Ass
 
 ---
 *Note: Ensure your entities are explicitly assigned to Areas in Home Assistant (Settings -> Areas & Zones) so the configuration flow can auto-discover them.*
+
+## Disclaimer
+
+Use this software at your own risk. I accept no liability.
