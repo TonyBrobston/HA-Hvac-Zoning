@@ -2,10 +2,10 @@
 
 from unittest.mock import AsyncMock
 
-import pytest
 from homeassistant.components.climate.const import HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant, State
+import pytest
 
 from custom_components.hvac_zoning.climate import Thermostat
 
