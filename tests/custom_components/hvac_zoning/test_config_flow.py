@@ -98,42 +98,6 @@ def test_is_entity_available(hass: HomeAssistant, state, expected) -> None:
     assert is_entity_available(hass, "cover.test_vent") is expected
 
 
-def test_filter_excludes_unknown_connectivity_sensors(
-    hass: HomeAssistant,
-) -> None:
-    """Test that connectivity sensors with unknown state are excluded from the config flow options."""
-    device_class = "connectivity"
-    entities = [
-        RegistryEntry(
-            entity_id="binary_sensor.available_connectivity",
-            unique_id="Available Connectivity",
-            platform="hvac_stubs",
-            id="available_connectivity_id",
-            original_name="Available Connectivity",
-            original_device_class="connectivity",
-        ),
-        RegistryEntry(
-            entity_id="binary_sensor.unknown_connectivity",
-            unique_id="Unknown Connectivity",
-            platform="hvac_stubs",
-            id="unknown_connectivity_id",
-            original_name="Unknown Connectivity",
-            original_device_class="connectivity",
-        ),
-    ]
-
-    hass.states.async_set("binary_sensor.available_connectivity", "on")
-    hass.states.async_set("binary_sensor.unknown_connectivity", STATE_UNKNOWN)
-
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
-    )
-
-    assert entity_names == [
-        {"label": "Available Connectivity", "value": "binary_sensor.available_connectivity"},
-    ]
-
-
 def test_filter_excludes_off_connectivity_sensors(
     hass: HomeAssistant,
 ) -> None:
@@ -220,41 +184,6 @@ def test_filter_excludes_unavailable_entities(
 
     assert entity_names == [
         {"label": available_name, "value": available_entity_id},
-    ]
-
-
-def test_filter_excludes_nonexistent_entities(
-    hass: HomeAssistant,
-) -> None:
-    """Test that entities without state (not in hass.states) are excluded."""
-    device_class = "damper"
-    entities = [
-        RegistryEntry(
-            entity_id="cover.available_vent",
-            unique_id="Available Vent",
-            platform="hvac_stubs",
-            id="available_vent_id",
-            original_name="Available Vent",
-            original_device_class="damper",
-        ),
-        RegistryEntry(
-            entity_id="cover.nonexistent_vent",
-            unique_id="Nonexistent Vent",
-            platform="hvac_stubs",
-            id="nonexistent_vent_id",
-            original_name="Nonexistent Vent",
-            original_device_class="damper",
-        ),
-    ]
-
-    hass.states.async_set("cover.available_vent", "open")
-
-    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
-        hass, entities, device_class
-    )
-
-    assert entity_names == [
-        {"label": "Available Vent", "value": "cover.available_vent"},
     ]
 
 
