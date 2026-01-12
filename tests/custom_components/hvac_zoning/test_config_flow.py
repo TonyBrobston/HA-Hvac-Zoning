@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from homeassistant import data_entry_flow
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from custom_components.hvac_zoning import config_flow
 from custom_components.hvac_zoning.config_flow import (
     convert_bedroom_input_to_config_entry,
@@ -104,6 +104,51 @@ def test_is_entity_available_returns_false_for_nonexistent_entity(
 ) -> None:
     """Test is_entity_available returns False for nonexistent entity."""
     assert is_entity_available(hass, "cover.nonexistent_vent") is False
+
+
+def test_is_entity_available_returns_false_for_unknown_entity(
+    hass: HomeAssistant,
+) -> None:
+    """Test is_entity_available returns False for entity with unknown state."""
+    hass.states.async_set("cover.test_vent", STATE_UNKNOWN)
+
+    assert is_entity_available(hass, "cover.test_vent") is False
+
+
+def test_filter_excludes_unknown_connectivity_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test that connectivity sensors with unknown state are excluded from the config flow options."""
+    device_class = "connectivity"
+    entities = [
+        RegistryEntry(
+            entity_id="binary_sensor.available_connectivity",
+            unique_id="Available Connectivity",
+            platform="hvac_stubs",
+            id="available_connectivity_id",
+            original_name="Available Connectivity",
+            original_device_class="connectivity",
+        ),
+        RegistryEntry(
+            entity_id="binary_sensor.unknown_connectivity",
+            unique_id="Unknown Connectivity",
+            platform="hvac_stubs",
+            id="unknown_connectivity_id",
+            original_name="Unknown Connectivity",
+            original_device_class="connectivity",
+        ),
+    ]
+
+    hass.states.async_set("binary_sensor.available_connectivity", "on")
+    hass.states.async_set("binary_sensor.unknown_connectivity", STATE_UNKNOWN)
+
+    entity_names = filter_entities_to_device_class_and_map_to_value_and_label_array_of_dict(
+        hass, entities, device_class
+    )
+
+    assert entity_names == [
+        {"label": "Available Connectivity", "value": "binary_sensor.available_connectivity"},
+    ]
 
 
 def test_filter_excludes_unavailable_vents(

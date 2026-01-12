@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.area_registry import AreaRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, async_entries_for_area
 from homeassistant.helpers.selector import (
@@ -36,7 +36,7 @@ def is_entity_available(hass, entity_id):
     state = hass.states.get(entity_id)
     if state is None:
         return False
-    return state.state != STATE_UNAVAILABLE
+    return state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
 
 
 def filter_entities_to_device_class_and_map_to_entity_ids(hass, entities, device_class):
